@@ -1,14 +1,18 @@
 #include "gtest/gtest.h"
-
-int add(int a, int b){
-    return a+b;
-}
-
-TEST(test1, c1){
-    EXPECT_EQ(3, add(1,2));
-}
+#include "v8.h"
+#include "libplatform/libplatform.h"
 
 GTEST_API_ int main(int argc, char** argv){
+    v8::V8::InitializeICUDefaultLocation(argv[0]);
+    v8::V8::InitializeExternalStartupData(argv[0]);
+    std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+    v8::V8::InitializePlatform(platform.get());
+    v8::V8::Initialize();
+
     testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    int result = RUN_ALL_TESTS();
+
+    v8::V8::Dispose();
+    v8::V8::ShutdownPlatform();
+    return result;
 }
