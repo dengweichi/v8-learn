@@ -7,7 +7,7 @@
 #include "v8.h"
 #include "gtest/gtest.h"
 
-class Environment: public testing::Test {
+class Environment: public ::testing::Test {
 private:
     v8::Isolate* _isolate;
     v8::ArrayBuffer::Allocator* _array_buffer_allocator;
@@ -16,8 +16,9 @@ protected:
     void TearDown() override;
 
 public:
-    inline v8::Isolate* getIsolate ();
+    v8::Isolate* getIsolate () {
+        return _isolate;
+    }
 };
-
 
 #endif //V8_EXTENSION_ENVIRONMENT_H

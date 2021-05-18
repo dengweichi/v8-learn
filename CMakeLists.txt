@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(v8_extension)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 set(googleTestDir ./googletest)
 add_subdirectory(${googleTestDir})
