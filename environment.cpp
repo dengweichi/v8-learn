@@ -13,5 +13,7 @@ void Environment::SetUp() {
 }
 
 void Environment::TearDown() {
-
+  _isolate->Exit();
+  _isolate->Dispose();
+  delete _array_buffer_allocator;
 }

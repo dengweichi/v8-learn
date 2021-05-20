@@ -7,6 +7,8 @@
 #include "v8.h"
 #include "gtest/gtest.h"
 
+extern v8::Platform* g_default_platform;
+
 class Environment: public ::testing::Test {
 private:
     v8::Isolate* _isolate;
