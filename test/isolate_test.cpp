@@ -338,22 +338,61 @@ TEST_F(Environment, ThrowException) {
   EXPECT_TRUE(tryCatch.Exception().As<v8::String>()->StringEquals(v8::String::NewFromUtf8(isolate, "error").ToLocalChecked()));
 }
 
-TEST_F(Environment, Microtask) {
-  int status = 0;
-  v8::Isolate* isolate = getIsolate();
-  v8::Locker locker(isolate);
-  v8::HandleScope handleScope(isolate);
-  v8::Local<v8::Context> context = v8::Context::New(isolate);
-  isolate->EnqueueMicrotask([](void* data) -> void {
-    (*static_cast<int*>(data))++;
-  }, &status);
-  bool result = true;
-  do {
-    result = v8::platform::PumpMessageLoop(g_default_platform, isolate, v8::platform::MessageLoopBehavior::kDoNotWait);
-  } while (result);
-  EXPECT_TRUE(status == 1);
+void increase (void* data) {
+    (*static_cast<int *>(data))++;
 }
 
+TEST_F(Environment, Microtask) {
+    int status = 0;
+    v8::Isolate *isolate = getIsolate();
+    v8::HandleScope handleScope(isolate);
+    v8::Local<v8::Context> context = v8::Context::New(isolate);
+    v8::Context::Scope context_scope(context);
+    isolate->EnqueueMicrotask(increase, &status);
+    v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked()).ToLocalChecked()->Run(
+            context).ToLocalChecked();
+    EXPECT_TRUE(status == 1);
+    isolate->EnqueueMicrotask(increase, &status);
+    v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked()).ToLocalChecked()->Run(
+            context).ToLocalChecked();
+    EXPECT_TRUE(status == 2);
+}
+
+namespace v9{
+    namespace internal{
+        class Isolate{
+            private:
+                const char* name = "name";
+            public:
+                static Isolate* New() {
+                    return new Isolate();
+                };
+                const char* getName() {
+                    return name;
+                }
+        };
+    }
+    class Isolate{
+    public:
+        static Isolate* New() {
+            return reinterpret_cast<Isolate*>(internal::Isolate::New());
+        };
+        const char* getName() {
+            internal::Isolate* isolate = reinterpret_cast<internal::Isolate*>(this);
+            return isolate->getName();
+        }
+        ~Isolate(){
+            internal::Isolate* isolate = reinterpret_cast<internal::Isolate*>(this);
+            delete isolate;
+        }
+    };
+}
+
+TEST(isoate_test, proxy) {
+    v9::Isolate *isolate = v9::Isolate::New();
+    EXPECT_STREQ(isolate->getName(), "name");
+    EXPECT_TRUE(sizeof(v9::Isolate) == 1);
+}
 
 
 
