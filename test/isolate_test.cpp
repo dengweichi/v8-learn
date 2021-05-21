@@ -338,24 +338,159 @@ TEST_F(Environment, ThrowException) {
   EXPECT_TRUE(tryCatch.Exception().As<v8::String>()->StringEquals(v8::String::NewFromUtf8(isolate, "error").ToLocalChecked()));
 }
 
-void increase (void* data) {
-    (*static_cast<int *>(data))++;
-}
 
 TEST_F(Environment, Microtask) {
-    int status = 0;
-    v8::Isolate *isolate = getIsolate();
-    v8::HandleScope handleScope(isolate);
-    v8::Local<v8::Context> context = v8::Context::New(isolate);
-    v8::Context::Scope context_scope(context);
-    isolate->EnqueueMicrotask(increase, &status);
-    v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked()).ToLocalChecked()->Run(
-            context).ToLocalChecked();
-    EXPECT_TRUE(status == 1);
-    isolate->EnqueueMicrotask(increase, &status);
-    v8::Script::Compile(context, v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked()).ToLocalChecked()->Run(
-            context).ToLocalChecked();
-    EXPECT_TRUE(status == 2);
+  int status = 0;
+  int microtasksCompleteCount = 0;
+  v8::Isolate *isolate = getIsolate();
+  v8::Locker locker(isolate);
+  isolate->AddMicrotasksCompletedCallback(
+      [](v8::Isolate *isolate, void *data) -> void {
+        (*static_cast<int *>(data))++;
+      },
+      &microtasksCompleteCount);
+
+  v8::HandleScope handleScope(isolate);
+  v8::Local<v8::Context> context = v8::Context::New(isolate);
+  v8::Context::Scope context_scope(context);
+  isolate->EnqueueMicrotask([](void* data) -> void{
+    (*static_cast<int *>(data))++;
+  }, &status);
+  v8::Script::Compile(context,
+                      v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked())
+      .ToLocalChecked()
+      ->Run(context);
+  EXPECT_TRUE(status == 1);
+
+  isolate->EnqueueMicrotask([](void* data) -> void{
+    (*static_cast<int *>(data))++;
+  }, &status);
+  v8::Script::Compile(context,
+                      v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked())
+      .ToLocalChecked()
+      ->Run(context);
+  EXPECT_TRUE(status == 2);
+  EXPECT_TRUE(microtasksCompleteCount == 2);
+}
+
+TEST_F(Environment, MicrotasksPolicy) {
+  int status = 0;
+  int microtasksCompleteCount = 0;
+  v8::Isolate* isolate = getIsolate();
+  v8::Locker locker(isolate);
+  auto increase = [](void* data)-> void  {
+    (*static_cast<int *>(data))++;
+  };
+
+  isolate->AddMicrotasksCompletedCallback(
+      [](v8::Isolate *isolate, void *data) -> void {
+        (*static_cast<int *>(data))++;
+      },
+      &microtasksCompleteCount);
+
+  v8::HandleScope handleScope(isolate);
+  v8::Local<v8::Context> context = v8::Context::New(isolate);
+  v8::Context::Scope context_scope(context);
+
+  isolate->EnqueueMicrotask(increase, &status);
+  // 使用v8 微任务队列默认策略
+  isolate->SetMicrotasksPolicy(v8::MicrotasksPolicy::kAuto);
+  v8::Script::Compile(context,
+                      v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked())
+      .ToLocalChecked()
+      ->Run(context);
+  EXPECT_TRUE(status == 1);
+  EXPECT_TRUE(microtasksCompleteCount == 1);
+
+  isolate->EnqueueMicrotask(increase, &status);
+  // 使用明确的策略
+  isolate->SetMicrotasksPolicy(v8::MicrotasksPolicy::kExplicit);
+  v8::Script::Compile(context,
+                      v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked())
+      .ToLocalChecked()
+      ->Run(context);
+  EXPECT_TRUE(status == 1);
+  EXPECT_TRUE(microtasksCompleteCount == 1);
+
+  isolate->PerformMicrotaskCheckpoint();
+  EXPECT_TRUE(status == 2);
+  EXPECT_TRUE(microtasksCompleteCount == 2);
+
+
+  isolate->EnqueueMicrotask(increase, &status);
+  // 使用 scope策略
+  isolate->SetMicrotasksPolicy(v8::MicrotasksPolicy::kScoped);
+  v8::Script::Compile(context,
+                      v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked())
+      .ToLocalChecked()
+      ->Run(context);
+  EXPECT_TRUE(status == 2);
+  EXPECT_TRUE(microtasksCompleteCount == 2);
+
+  {
+    v8::MicrotasksScope scope(isolate,
+                               v8::MicrotasksScope::kRunMicrotasks);
+  }
+  EXPECT_TRUE(status == 3);
+  EXPECT_TRUE(microtasksCompleteCount == 3);
+}
+
+
+TEST_F(Environment, MessageListener) {
+  v8::Isolate* isolate = getIsolate();
+  v8::Locker locker(isolate);
+  v8::HandleScope scope(isolate);
+  v8::Local<v8::Context> context = v8::Context::New(isolate);
+  v8::Context::Scope context_scope(context);
+  {
+    auto warningListener = [](v8::Local<v8::Message> message, v8::Local<v8::Value> data) -> void {
+      std::cout << message->ErrorLevel() << std::endl;
+      EXPECT_EQ(v8::Isolate::kMessageWarning, message->ErrorLevel());
+    };
+    isolate->AddMessageListenerWithErrorLevel(warningListener, v8::Isolate::kMessageAll);
+    // 没有声明
+    const char* source =  " params = 1;";
+    v8::Script::Compile(context,
+                        v8::String::NewFromUtf8(isolate, source).ToLocalChecked())
+        .ToLocalChecked()
+        ->Run(context);
+    isolate->RemoveMessageListeners( warningListener);
+  }
+  {
+    auto errorListener = [](v8::Local<v8::Message> message, v8::Local<v8::Value> data) -> void {
+      EXPECT_EQ(v8::Isolate::kMessageError, message->ErrorLevel());
+    };
+    isolate->AddMessageListenerWithErrorLevel(errorListener, v8::Isolate::kMessageAll);
+    // 严格模式，变量未定义
+    const char* source = "throw new Error('error');";
+    v8::Script::Compile(context,
+                        v8::String::NewFromUtf8(isolate, source).ToLocalChecked())
+        .ToLocalChecked()
+        ->Run(context);
+    isolate->RemoveMessageListeners( errorListener);
+  }
+}
+TEST_F(Environment, SetAbortOnUncaughtException) {
+  v8::V8::SetFlagsFromString("--abort-on-uncaught-exception");
+  v8::Isolate* isolate = getIsolate();
+  v8::Locker locker(isolate);
+  v8::HandleScope scope(isolate);
+  v8::Local<v8::Context> context = v8::Context::New(isolate);
+  v8::Context::Scope context_scope(context);
+  {
+    isolate->SetAbortOnUncaughtExceptionCallback([](v8::Isolate* isolate) -> bool{
+      return false;
+    });
+    const char* source = "throw new Error('error');";
+    v8::MaybeLocal<v8::Value> result =
+        v8::Script::Compile(
+            context, v8::String::NewFromUtf8(isolate, source).ToLocalChecked())
+            .ToLocalChecked()
+            ->Run(context);
+    EXPECT_TRUE(result.IsEmpty());
+    EXPECT_FALSE(isolate->IsDead());
+    isolate->SetAbortOnUncaughtExceptionCallback(nullptr);
+  }
 }
 
 namespace v9{
