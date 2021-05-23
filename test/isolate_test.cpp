@@ -200,104 +200,158 @@ TEST_F(Environment, data) {
   delete data;
 }
 
+class ModuleResolutionData {
+public:
+    ModuleResolutionData(v8::Isolate* _isolate,v8::Local<v8::Module> _module, v8::Local<v8::Promise::Resolver> _resolver) {
+        isolate = _isolate;
+        module.Reset(_isolate, _module);
+        resolver.Reset(_isolate, _resolver);
+
+    };
+    v8::Global<v8::Module> module;
+    v8::Global<v8::Promise::Resolver> resolver;
+    v8::Isolate* isolate;
+    ~ModuleResolutionData(){
+        module.SetWeak();
+        resolver.SetWeak();
+    }
+};
+
 TEST_F(Environment, dynamicallyImport) {
-  v8::Isolate *isolate = getIsolate();
-  v8::Locker locker(isolate);
-  {
-    // 请求  import('xxx.js')执行的回调，由嵌入式应用提供回调
-    isolate->SetHostImportModuleDynamicallyCallback(
-        [](v8::Local<v8::Context> context,
-           v8::Local<v8::ScriptOrModule> referrer,
-           v8::Local<v8::String> specifier,
-           v8::Local<v8::FixedArray> import_assertions)
-            -> v8::MaybeLocal<v8::Promise> {
-          v8::Isolate *isolate = context->GetIsolate();
-          v8::Locker locker(isolate);
-          v8::MaybeLocal<v8::Promise::Resolver> maybe_resolver =
-              v8::Promise::Resolver::New(context);
-          v8::Local<v8::Promise::Resolver> resolver;
-          if (maybe_resolver.ToLocal(&resolver)) {
-            const char *scriptSource = "export const fun = function () {"
-                                       "  return 1;"
-                                       "}";
-            v8::ScriptOrigin origin(
-                isolate, specifier,
+    // 设置允许顶层await v8 9.0版本需要需要 flags 启动
+    v8::V8::SetFlagsFromString("--harmony-top-level-await");
+    v8::Isolate *isolate = getIsolate();
+    isolate->SetMicrotasksPolicy(v8::MicrotasksPolicy::kExplicit);
+    v8::Locker locker(isolate);
+    {
+        // 请求  import('xxx.js')执行的回调，由嵌入式应用提供回调
+        isolate->SetHostImportModuleDynamicallyCallback(
+                [](v8::Local<v8::Context> context,
+                   v8::Local<v8::ScriptOrModule> referrer,
+                   v8::Local<v8::String> specifier,
+                   v8::Local<v8::FixedArray> import_assertions) -> v8::MaybeLocal<v8::Promise> {
+
+                    // 获取该上下文的隔离实例
+                    v8::Isolate *isolate = context->GetIsolate();
+                    v8::Locker locker(isolate);
+
+                    // v8::Local<v8::ScriptOrModule> referrer 为引用的模块，在这里为index。js
+                    // v8::Local<v8::String> specifier, 为请求的模块名称
+                    EXPECT_TRUE(specifier->StringEquals(v8::String::NewFromUtf8Literal(isolate, "https://liebao.cn/second.js")));
+                    EXPECT_TRUE(referrer->GetResourceName().As<v8::String>()->StringEquals(
+                            v8::String::NewFromUtf8Literal(isolate, "https://liebao.cn/index.js")));
+                    // 创建 promise
+                    v8::Local<v8::Promise::Resolver> resolver = v8::Promise::Resolver::New(context).ToLocalChecked();
+                    const char *scriptSource = "export const fun = function () {\n"
+                                               "  return 1;\n"
+                                               "}\n";
+                    // 脚本编译需要的编译条件。
+                    v8::ScriptOrigin origin(
+                            isolate, specifier,
+                            0, 0, false, -1, v8::Local<v8::Value>(), false, false, true);
+                    v8::ScriptCompiler::Source source(
+                            v8::String::NewFromUtf8(isolate, scriptSource).ToLocalChecked(),
+                            origin);
+                    // 把脚本作为模块去编译
+                    v8::Local<v8::Module> module =
+                            v8::ScriptCompiler::CompileModule(
+                                    isolate, &source,
+                                    v8::ScriptCompiler::CompileOptions::kNoCompileOptions,
+                                    v8::ScriptCompiler::NoCacheReason::kNoCacheNoReason)
+                                    .ToLocalChecked();
+                    // 实例化模块
+                    module->InstantiateModule(
+                            context,
+                            [](v8::Local<v8::Context> context, v8::Local<v8::String> specifier,
+                               v8::Local<v8::FixedArray> import_assertions,
+                               v8::Local<v8::Module> referrer) -> v8::MaybeLocal<v8::Module> {
+                                return v8::MaybeLocal<v8::Module>();
+                            }).FromJust();
+                    v8::Local<v8::Value> result = module->Evaluate(context).ToLocalChecked();
+                    // 执行事件循环
+                    isolate->PerformMicrotaskCheckpoint();
+
+                    EXPECT_TRUE(result->IsPromise());
+
+                    ModuleResolutionData* moduleResolutionData = new ModuleResolutionData(isolate, module, resolver);
+                    // 外部扩展。用于把 c++指针包装成句柄
+                    v8::Local<v8::External> external = v8::External::New(isolate,  moduleResolutionData);
+                    // 设置Promise 回调
+                    result.As<v8::Promise>()->Then(context, v8::Function::New(context, [](const v8::FunctionCallbackInfo<v8::Value>& info) -> void {
+                        v8::Isolate* isolate = info.GetIsolate();
+                        v8::HandleScope handleScope(isolate);
+                        // 把ModuleResolutionData 指针转换成 std::unique_ptr指针。在析构函数中把全局句柄变量 setWeak。可以让gc回收。
+                        std::unique_ptr<ModuleResolutionData> moduleResolutionData(static_cast<ModuleResolutionData*>(info.Data().As<v8::External>()->Value()));
+                        v8::Local<v8::Module> module = moduleResolutionData->module.Get(isolate);
+                        v8::Local<v8::Promise::Resolver> resolver = moduleResolutionData->resolver.Get(isolate);
+                        resolver->Resolve(isolate->GetCurrentContext(), module->GetModuleNamespace()).FromJust();
+                    }, external).ToLocalChecked()).ToLocalChecked();
+
+                    isolate->PerformMicrotaskCheckpoint();
+                    return resolver->GetPromise();
+                });
+
+        // 获取模块元信息回调
+        isolate->SetHostInitializeImportMetaObjectCallback(
+                [](v8::Local<v8::Context> context, v8::Local<v8::Module> module,
+                   v8::Local<v8::Object> meta) -> void {
+                    v8::Isolate *isolate = context->GetIsolate();
+                    meta->Set(context,
+                              v8::String::NewFromUtf8(isolate, "url").ToLocalChecked(),
+                              v8::String::NewFromUtf8(isolate, "https://liebao.cn")
+                                      .ToLocalChecked());
+                });
+
+        v8::HandleScope handleScope(isolate);
+        v8::Local<v8::Context> context = v8::Context::New(isolate);
+        v8::Context::Scope context_scope(context);
+
+        // 设置全局打印函数。用于输出fun()函数的输出结果
+        context->Global()->Set(context, v8::String::NewFromUtf8Literal(isolate, "print"), v8::Function::New(context, [](const v8::FunctionCallbackInfo<v8::Value>& info) ->void {
+            EXPECT_TRUE(info[0]->IsNumber());
+            EXPECT_TRUE(info[0].As<v8::Number>() ->Value() == 1);
+        }).ToLocalChecked()).FromJust();
+
+        // 设置输出 import.meta.url 函数
+        context->Global()->Set(context, v8::String::NewFromUtf8Literal(isolate, "printMetaUrl"), v8::Function::New(context, [](const v8::FunctionCallbackInfo<v8::Value>& info) ->void {
+            EXPECT_TRUE(info[0]->IsString());
+            EXPECT_TRUE(info[0].As<v8::String>() ->StrictEquals(v8::String::NewFromUtf8Literal(info.GetIsolate(), "https://liebao.cn")));
+        }).ToLocalChecked()).FromJust();
+
+        const char *scriptSource = "const { fun } = await import('https://liebao.cn/second.js');\n"
+                                   "const result = fun();\n"
+                                   "printMetaUrl(import.meta.url);\n"
+                                   "print(result);\n";
+
+        // 脚本元信息
+        v8::ScriptOrigin origin(
+                isolate, v8::String::NewFromUtf8Literal(isolate, "https://liebao.cn/index.js"),
                 0, 0, false, -1, v8::Local<v8::Value>(), false, false, true);
-            v8::ScriptCompiler::Source source(
+        // 脚本
+        v8::ScriptCompiler::Source source(
                 v8::String::NewFromUtf8(isolate, scriptSource).ToLocalChecked(),
                 origin);
-            v8::Local<v8::Module> module =
-                v8::ScriptCompiler::CompileModule(
-                    isolate, &source,
-                    v8::ScriptCompiler::CompileOptions::kNoCompileOptions,
-                    v8::ScriptCompiler::NoCacheReason::kNoCacheNoReason)
-                    .ToLocalChecked();
-            module->InstantiateModule(
+
+        v8::TryCatch tryCatch(isolate);
+        // 把脚本以 es-module去编译
+        v8::Local<v8::Module> module = v8::ScriptCompiler::CompileModule(
+                isolate, &source,
+                v8::ScriptCompiler::CompileOptions::kNoCompileOptions,
+                v8::ScriptCompiler::NoCacheReason::kNoCacheNoReason)
+                .ToLocalChecked();
+        // 实例化模块
+        module->InstantiateModule(
                 context,
                 [](v8::Local<v8::Context> context, v8::Local<v8::String> specifier,
                    v8::Local<v8::FixedArray> import_assertions,
                    v8::Local<v8::Module> referrer) -> v8::MaybeLocal<v8::Module> {
-                  return v8::MaybeLocal<v8::Module>();
-                });
-
-            resolver->Resolve(context, module->GetModuleNamespace());
-            return  resolver->GetPromise();
-          }
-          return v8::MaybeLocal<v8::Promise>();
-        });
-    // 获取模块元信息回调
-    isolate->SetHostInitializeImportMetaObjectCallback(
-        [](v8::Local<v8::Context> context, v8::Local<v8::Module> module,
-           v8::Local<v8::Object> meta) -> void {
-          v8::Isolate *isolate = context->GetIsolate();
-          meta->Set(context,
-                    v8::String::NewFromUtf8(isolate, "url").ToLocalChecked(),
-                    v8::String::NewFromUtf8(isolate, "https://liebao.cn")
-                        .ToLocalChecked());
-        });
-
-    v8::HandleScope handleScope(isolate);
-    v8::Local<v8::Context> context = v8::Context::New(isolate);
-    v8::Context::Scope context_scope(context);
-    const char *scriptSource = "import('./second.js').then(( { fun } )=> {"
-                               "  const result = fun(); "
-                               "  print(result); "
-                               "})";
-    // 全局注册打印函数
-    context->Global()->Set(
-        context, v8::String::NewFromUtf8(isolate, "print").ToLocalChecked(),
-        v8::Function::New(context, [](const v8::FunctionCallbackInfo<v8::Value>& info)->void {
-          v8::Isolate* isolate = info.GetIsolate();
-          v8::HandleScope handleScope(isolate);
-          v8::Local<v8::Context> context = isolate->GetCurrentContext();
-          EXPECT_TRUE(info[0].As<v8::Number>()->Value() == 1);
-        }).ToLocalChecked());
-    // 脚本元信息
-    v8::ScriptOrigin origin(
-        isolate, v8::String::NewFromUtf8(isolate, "index.js").ToLocalChecked(),
-        0, 0, false, -1, v8::Local<v8::Value>(), false, false, true);
-    // 脚本
-    v8::ScriptCompiler::Source source(
-        v8::String::NewFromUtf8(isolate, scriptSource).ToLocalChecked(),
-        origin);
-    // 把脚本以 es-module去编译
-    v8::Local<v8::Module> module =
-        v8::ScriptCompiler::CompileModule(
-            isolate, &source,
-            v8::ScriptCompiler::CompileOptions::kNoCompileOptions,
-            v8::ScriptCompiler::NoCacheReason::kNoCacheNoReason)
-            .ToLocalChecked();
-    // 实例化模块
-    module->InstantiateModule(
-        context,
-        [](v8::Local<v8::Context> context, v8::Local<v8::String> specifier,
-           v8::Local<v8::FixedArray> import_assertions,
-           v8::Local<v8::Module> referrer) -> v8::MaybeLocal<v8::Module> {
-          return v8::MaybeLocal<v8::Module>();
-        });
-    // 执行模块
-    module->Evaluate(context).ToLocalChecked();
-  }
+                    return v8::MaybeLocal<v8::Module>();
+                }).FromJust();
+        // 执行模块;
+        module->Evaluate(context).ToLocalChecked();
+        // 执行微任务队列
+        isolate->PerformMicrotaskCheckpoint();
+    }
 }
 
 TEST_F(Environment, context) {
@@ -359,7 +413,7 @@ TEST_F(Environment, Microtask) {
   v8::Script::Compile(context,
                       v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked())
       .ToLocalChecked()
-      ->Run(context);
+      ->Run(context).ToLocalChecked();
   EXPECT_TRUE(status == 1);
 
   isolate->EnqueueMicrotask([](void* data) -> void{
@@ -368,7 +422,7 @@ TEST_F(Environment, Microtask) {
   v8::Script::Compile(context,
                       v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked())
       .ToLocalChecked()
-      ->Run(context);
+      ->Run(context).ToLocalChecked();
   EXPECT_TRUE(status == 2);
   EXPECT_TRUE(microtasksCompleteCount == 2);
 }
