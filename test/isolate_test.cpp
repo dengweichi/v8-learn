@@ -462,7 +462,7 @@ TEST_F(Environment, MicrotasksPolicy) {
   v8::Script::Compile(context,
                       v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked())
       .ToLocalChecked()
-      ->Run(context);
+      ->Run(context).ToLocalChecked();
   EXPECT_TRUE(status == 1);
   EXPECT_TRUE(microtasksCompleteCount == 1);
 
@@ -477,13 +477,12 @@ TEST_F(Environment, MicrotasksPolicy) {
   v8::Script::Compile(context,
                       v8::String::NewFromUtf8(isolate, "1+1").ToLocalChecked())
       .ToLocalChecked()
-      ->Run(context);
+      ->Run(context).ToLocalChecked();
   EXPECT_TRUE(status == 2);
   EXPECT_TRUE(microtasksCompleteCount == 2);
 
   {
-    v8::MicrotasksScope scope(isolate,
-                               v8::MicrotasksScope::kRunMicrotasks);
+    v8::MicrotasksScope scope(isolate,v8::MicrotasksScope::kRunMicrotasks);
   }
   EXPECT_TRUE(status == 3);
   EXPECT_TRUE(microtasksCompleteCount == 3);
@@ -498,16 +497,15 @@ TEST_F(Environment, MessageListener) {
   v8::Context::Scope context_scope(context);
   {
     auto warningListener = [](v8::Local<v8::Message> message, v8::Local<v8::Value> data) -> void {
-      std::cout << message->ErrorLevel() << std::endl;
       EXPECT_EQ(v8::Isolate::kMessageWarning, message->ErrorLevel());
     };
     isolate->AddMessageListenerWithErrorLevel(warningListener, v8::Isolate::kMessageAll);
     // 没有声明
     const char* source =  " params = 1;";
-    v8::Script::Compile(context,
+    EXPECT_TRUE(v8::Script::Compile(context,
                         v8::String::NewFromUtf8(isolate, source).ToLocalChecked())
         .ToLocalChecked()
-        ->Run(context);
+        ->Run(context).IsEmpty());
     isolate->RemoveMessageListeners( warningListener);
   }
   {
@@ -517,10 +515,10 @@ TEST_F(Environment, MessageListener) {
     isolate->AddMessageListenerWithErrorLevel(errorListener, v8::Isolate::kMessageAll);
     // 严格模式，变量未定义
     const char* source = "throw new Error('error');";
-    v8::Script::Compile(context,
+    EXPECT_TRUE(v8::Script::Compile(context,
                         v8::String::NewFromUtf8(isolate, source).ToLocalChecked())
         .ToLocalChecked()
-        ->Run(context);
+        ->Run(context).IsEmpty());
     isolate->RemoveMessageListeners( errorListener);
   }
 }

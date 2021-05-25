@@ -58,7 +58,7 @@ private:
     constexpr static const char *const source = "native function add();"
                                                 "native function get();";
 };
-TEST_F(Environment, ExtensionConfiguration){
+TEST_F(Environment, context_ExtensionConfiguration){
   std::unique_ptr<ExampleExtension> extension = std::make_unique<ExampleExtension>();
   // 注册v8扩展
   v8::RegisterExtension(std::move(extension));
@@ -96,7 +96,7 @@ TEST_F(Environment, ExtensionConfiguration){
   EXPECT_TRUE(result.ToLocalChecked().As<v8::String>()->StrictEquals(v8::String::NewFromUtf8(isolate, "hello word").ToLocalChecked()));
 }
 
-TEST_F(Environment, createGlobalObjectTemplate) {
+TEST_F(Environment, context_GlobalObjectTemplate) {
     v8::Isolate* isolate = getIsolate();
     v8::Locker locker(isolate);
     v8::HandleScope handleScope(isolate);
@@ -141,27 +141,69 @@ TEST_F(Environment, createGlobalObjectTemplate) {
     }
 }
 
-TEST_F(Environment, createGlobalObject) {
+TEST_F(Environment, context_globalObject) {
     v8::Isolate *isolate = getIsolate();
     v8::Locker locker(isolate);
     v8::HandleScope handleScope(isolate);
     v8::Local<v8::String> securityToken = v8::String::NewFromUtf8Literal(isolate, "Password");
     v8::Local<v8::Context> context1 = v8::Context::New(isolate, nullptr);
-    context1->Enter();
-    context1->SetSecurityToken(securityToken);
-    context1->Global()->Set(context1, v8::String::NewFromUtf8Literal(isolate, "property"), v8::Number::New(isolate,1)).FromJust();
+    v8::Local<v8::String> property = v8::String::NewFromUtf8Literal(isolate, "property");
+    {
+      context1->Enter();
+      // 设设置安全令牌。看下面的解析。
+      context1->SetSecurityToken(securityToken);
+      v8::Local<v8::Object> global1 = context1->Global();
+      // 再全局对象上设置熟悉 property = 1
+      EXPECT_TRUE(global1->Set(context1, property, v8::Number::New(isolate,1)).FromJust());
+      context1->Exit();
+      EXPECT_TRUE(global1->Equals(context1, context1->Global()).FromJust());
 
-    v8::Local<v8::Context> context2 = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), context1->Global());
-    context2->Enter();
-    context2->SetSecurityToken(securityToken);
-    EXPECT_TRUE(context1->Global()->Get(context1, v8::String::NewFromUtf8Literal(isolate, "property")).ToLocalChecked()->IsNumber());
-    EXPECT_TRUE(context2->Global()->Get(context1, v8::String::NewFromUtf8Literal(isolate, "property")).ToLocalChecked()->IsUndefined());
-
-    context2->Exit();
-    context1->Exit();
+      // 把context1的全局对象作为创建 context2
+      v8::Local<v8::Context> context2 = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), global1);
+      EXPECT_FALSE(global1->Equals(context1, context1->Global()).FromJust());
+      context2->Enter();
+      context2->SetSecurityToken(securityToken);
+      v8::Local<v8::Object> global2 = context2->Global();
+      // context1 和context2 的全局代理是同一个
+      EXPECT_TRUE(global1->Equals(context2, context2->Global()).FromJust());
+      {
+        //全局对象的状态将被完全重置并且仅保留对象标识。
+        EXPECT_TRUE(global2->Get(context2, property).ToLocalChecked()->IsUndefined());
+        v8::Context::Scope context_scope(context1);
+        EXPECT_TRUE(global1->Get(context1,property).ToLocalChecked()->IsUndefined());
+        EXPECT_TRUE(context1->Global()->Get(context1,property).ToLocalChecked().As<v8::Number>()->Value() == 1);
+      }
+      context2->Exit();
+      {
+        context1->Enter();
+        EXPECT_TRUE(global1->Set(context1, property, v8::Number::New(isolate,2)).FromJust());
+        EXPECT_TRUE(global1->Get(context1, property).ToLocalChecked()->ToInt32(context1).ToLocalChecked()->Value() == 2);
+        EXPECT_TRUE(global1->Equals(context2, context2->Global()).FromJust());
+        context1->Exit();
+        context2->Enter();
+        EXPECT_TRUE(global2->Get(context2, property).ToLocalChecked()->ToInt32(context2).ToLocalChecked()->Value() == 2);
+        EXPECT_TRUE(global2->Set(context2, property, v8::Number::New(isolate,3)).FromJust());
+        context2->Exit();
+        context1->Enter();
+        EXPECT_TRUE(global1->Get(context1, property).ToLocalChecked()->ToInt32(context1).ToLocalChecked()->Value() == 3);
+        EXPECT_TRUE(global1->Get(context2, property).ToLocalChecked()->ToInt32(context2).ToLocalChecked()->Value() == 3);
+        context1->Exit();
+      }
+    }
 }
 
-TEST_F(Environment,  MicrotaskQueue) {
+TEST_F(Environment, context_sandbox) {
+  v8::Isolate *isolate = getIsolate();
+  v8::Locker locker(isolate);
+  v8::HandleScope handleScope(isolate);
+  v8::Local<v8::String> securityToken = v8::String::NewFromUtf8Literal(isolate, "Password");
+  v8::Local<v8::Context> context = v8::Context::New(isolate, nullptr);
+
+}
+
+
+
+TEST_F(Environment,  context_MicrotaskQueue) {
     v8::Isolate *isolate = getIsolate();
     v8::Locker locker(isolate);
     v8::HandleScope handleScope(isolate);
@@ -174,11 +216,11 @@ TEST_F(Environment,  MicrotaskQueue) {
         (*static_cast<int*>(data))++;
     }, &data);
     EXPECT_TRUE(context->GetMicrotaskQueue() == microtaskQueue);
-    microtaskQueue->PerformCheckpoint(isolate);
+    isolate->PerformMicrotaskCheckpoint();
     EXPECT_TRUE(data == 1);
 }
 
-TEST_F(Environment, Global) {
+TEST_F(Environment, context_Global) {
     v8::Isolate *isolate = getIsolate();
     v8::Locker locker(isolate);
     v8::HandleScope handleScope(isolate);
@@ -264,8 +306,11 @@ TEST_F(Environment, Global) {
 
 }
 
-TEST_F(Environment, SecurityChecks) {
+TEST_F(Environment, context_SecurityChecks) {
     v8::Isolate *isolate = getIsolate();
+    isolate->SetAbortOnUncaughtExceptionCallback([](v8::Isolate* isolate) -> bool{
+      return false;
+    });
     v8::Locker locker(isolate);
     v8::HandleScope handleScope(isolate);
     v8::Local<v8::String> mainDomain = v8::String::NewFromUtf8Literal(isolate, "https://liebao.cn");
@@ -342,7 +387,7 @@ TEST_F(Environment, SecurityChecks) {
         EXPECT_TRUE(tryCatch.HasCaught());
     }
 }
-TEST_F(Environment, embedderData) {
+TEST_F(Environment, context_embedderData) {
     v8::Isolate *isolate = getIsolate();
     v8::Locker locker(isolate);
     v8::HandleScope handleScope(isolate);
@@ -363,4 +408,122 @@ TEST_F(Environment, embedderData) {
     thread.join();
     EXPECT_TRUE(context->GetEmbedderData(index)->IsString());
     EXPECT_TRUE(context->GetEmbedderData(index).As<v8::String>()->StringEquals(v8::String::NewFromUtf8Literal(isolate, "data")));
+}
+
+TEST_F(Environment, context_AlignedPointerFromEmbedderData) {
+  v8::Isolate *isolate = getIsolate();
+  v8::Locker locker(isolate);
+  v8::HandleScope handleScope(isolate);
+  v8::Local<v8::Context> context = v8::Context::New(isolate);
+  v8::Context::Scope context_scope(context);
+  // 获取相对当前隔离实例唯一插槽域
+  uint32_t index = context->GetNumberOfEmbedderDataFields();
+  std::string data ("data");
+  context->SetAlignedPointerInEmbedderData(index, &data);
+
+  v8::Persistent<v8::Context, v8::CopyablePersistentTraits<v8::Context>> persistentContext(isolate, context);
+  std::thread thread([](v8::Isolate* isolate, v8::Persistent<v8::Context, v8::CopyablePersistentTraits<v8::Context>> persistentContext, uint32_t index){
+    v8::Local<v8::Context> context = persistentContext.Get(isolate);
+    EXPECT_TRUE(*static_cast<std::string*>(context->GetAlignedPointerFromEmbedderData(index)) == "data");
+  }, isolate, persistentContext, index);
+  thread.join();
+  EXPECT_TRUE(static_cast<std::string*>(context->GetAlignedPointerFromEmbedderData(index)) == &data);
+}
+
+TEST_F(Environment,context_DetachGlobal) {
+  v8::Isolate *isolate = getIsolate();
+  // 设置为拦截异常不中止进程执行
+  isolate->SetAbortOnUncaughtExceptionCallback([](v8::Isolate* isolate) -> bool{
+    return false;
+  });
+  v8::Locker locker(isolate);
+  v8::HandleScope handleScope(isolate);
+
+  v8::Local<v8::String> mainDomain = v8::String::NewFromUtf8Literal(isolate, "https://liebao.cn");
+
+  v8::Local<v8::Context> context1 = v8::Context::New(isolate);
+  context1->SetSecurityToken(mainDomain);
+  {
+    v8::Context::Scope context_scope(context1);
+    // 设置了全局变量
+    EXPECT_FALSE(v8::Script::Compile(context1,
+                        v8::String::NewFromUtf8Literal(isolate, "var property = 1;"))
+        .ToLocalChecked()
+        ->Run(context1).ToLocalChecked().IsEmpty());
+  }
+
+  v8::Local<v8::Context> context2 = v8::Context::New(isolate);
+  context2->SetSecurityToken(mainDomain);
+  {
+    v8::Context::Scope context_scope(context2);
+    EXPECT_TRUE(context2->Global()->Set(context2, v8::String::NewFromUtf8Literal(isolate, "parent"), context1->Global()).FromJust());
+    v8::Local<v8::Value> result =v8::Script::Compile(context2, v8::String::NewFromUtf8Literal(
+                                          isolate, "parent.property")).ToLocalChecked()
+                                        ->Run(context2).ToLocalChecked();
+    EXPECT_TRUE(result->ToInt32(context2).ToLocalChecked()->Value() == 1);
+  }
+  v8::Local<v8::Object> global1 = context1->Global();
+  // context1全局变量在分离前
+  {
+    v8::Context::Scope context_scope(context1);
+    EXPECT_TRUE(global1->Equals(context1, context1->Global()).FromJust());
+    EXPECT_TRUE(global1->Get(context1, v8::String::NewFromUtf8Literal(isolate, "property")).ToLocalChecked()->ToInt32(context1).ToLocalChecked()->Value() == 1);
+  }
+  context1->DetachGlobal();
+  // context1全局变量在分离后
+  {
+    v8::Context::Scope context_scope(context1);
+    EXPECT_FALSE(global1->Equals(context1, context1->Global()).FromJust());
+    EXPECT_TRUE(global1->Get(context1, v8::String::NewFromUtf8Literal(isolate, "property")).IsEmpty());
+    EXPECT_TRUE(context1->Global()->Get(context1, v8::String::NewFromUtf8Literal(isolate, "property")).ToLocalChecked()->ToInt32(context1).ToLocalChecked()->Value() == 1);
+  }
+
+  {
+    v8::Context::Scope context_scope(context2);
+    v8::TryCatch tryCatch(isolate);
+    EXPECT_TRUE(v8::Script::Compile(context2, v8::String::NewFromUtf8Literal(
+        isolate, "parent.property")).ToLocalChecked()->Run(context2).IsEmpty());
+    EXPECT_TRUE(tryCatch.HasCaught());
+  }
+
+  // 把 context1 分离的全局对象绑定到 context3
+  v8::Local<v8::Context> context3 = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), global1);
+  context3->SetSecurityToken(mainDomain);
+  EXPECT_TRUE(global1->Equals(context3, context3->Global()).FromJust());
+  EXPECT_FALSE(context1->Global()->Equals(context3, context3->Global()).FromJust());
+  {
+    v8::Context::Scope context_scope(context3);
+    EXPECT_TRUE(context3->Global()->Get(context3,v8::String::NewFromUtf8Literal(isolate, "property")).ToLocalChecked()->IsUndefined());
+    // 设置了全局变量
+    EXPECT_FALSE(v8::Script::Compile(context3,
+                                     v8::String::NewFromUtf8Literal(isolate, "var property = 2;"))
+                     .ToLocalChecked()
+                     ->Run(context3).ToLocalChecked().IsEmpty());
+  }
+  // context2 的parent重新绑定到 context1的全局变量种
+  {
+    v8::Context::Scope context_scope(context2);
+    v8::TryCatch tryCatch(isolate);
+    EXPECT_TRUE(v8::Script::Compile(context2, v8::String::NewFromUtf8Literal(
+        isolate, "parent.property")).ToLocalChecked()->Run(context2).ToLocalChecked()->ToInt32(context2).ToLocalChecked()->Value() == 2);
+  }
+}
+
+TEST_F(Environment,context_NewRemoteContext) {
+  v8::Isolate *isolate = getIsolate();
+  v8::Locker locker(isolate);
+  v8::HandleScope handleScope(isolate);
+  v8::Local<v8::ObjectTemplate> objectTemplate = v8::ObjectTemplate::New(isolate);
+  // 提供 对象模板访问检查回调。下面章节做做出解析
+  objectTemplate->SetAccessCheckCallback([](
+                                             v8::Local<v8::Context> accessing_context,
+                                            v8::Local<v8::Object> accessed_object,
+                                            v8::Local<v8::Value> data) -> bool {
+                  return  true;
+                });
+  
+  objectTemplate->Set(isolate, "property", v8::Number::New(isolate, 1));
+  v8::Local<v8::Object> globalObject = v8::Context::NewRemoteContext(isolate, objectTemplate).ToLocalChecked();
+  v8::Local<v8::Context> context = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), globalObject);
+  EXPECT_TRUE(globalObject->Equals(context, context->Global()).FromJust());
 }
