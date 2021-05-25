@@ -146,27 +146,38 @@ TEST_F(Environment, createGlobalObject) {
     v8::Locker locker(isolate);
     v8::HandleScope handleScope(isolate);
     v8::Local<v8::String> securityToken = v8::String::NewFromUtf8Literal(isolate, "Password");
-    v8::Local<v8::String> property = v8::String::NewFromUtf8Literal(isolate, "property");
+    v8::Local<v8::Context> context1 = v8::Context::New(isolate, nullptr);
+    context1->Enter();
+    context1->SetSecurityToken(securityToken);
+    context1->Global()->Set(context1, v8::String::NewFromUtf8Literal(isolate, "property"), v8::Number::New(isolate,1)).FromJust();
 
-    v8::Local<v8::ObjectTemplate> objectTemplate = v8::ObjectTemplate::New(isolate);
-    objectTemplate->Set(isolate, "key", v8::Number::New(isolate, 1));
-    {
-        v8::Local<v8::Context> context1 = v8::Context::New(isolate, nullptr, objectTemplate);
-        context1->Enter();
-        context1->SetSecurityToken(securityToken);
-        context1->Global()->Set(context1, property, v8::Number::New(isolate, 1)).FromJust();
+    v8::Local<v8::Context> context2 = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), context1->Global());
+    context2->Enter();
+    context2->SetSecurityToken(securityToken);
+    EXPECT_TRUE(context1->Global()->Get(context1, v8::String::NewFromUtf8Literal(isolate, "property")).ToLocalChecked()->IsNumber());
+    EXPECT_TRUE(context2->Global()->Get(context1, v8::String::NewFromUtf8Literal(isolate, "property")).ToLocalChecked()->IsUndefined());
 
-
-        v8::Local<v8::Context> context2 = v8::Context::New(isolate, nullptr, objectTemplate, context1->Global());
-        context2->Enter();
-        context2->SetSecurityToken(securityToken);
-
-        EXPECT_TRUE(context1->Global()->Equals(context2, context2->Global()).FromJust());
-
-        context2->Exit();
-        context1->Exit();
-    }
+    context2->Exit();
+    context1->Exit();
 }
+
+TEST_F(Environment,  MicrotaskQueue) {
+    v8::Isolate *isolate = getIsolate();
+    v8::Locker locker(isolate);
+    v8::HandleScope handleScope(isolate);
+    // 创建微任务队列，微任务队列的执行策略是由嵌入式应用主动执行
+    std::unique_ptr<v8::MicrotaskQueue> microtaskQueuePtr = v8::MicrotaskQueue::New(isolate, v8::MicrotasksPolicy::kExplicit);
+    v8::MicrotaskQueue* microtaskQueue = microtaskQueuePtr.get();
+    v8::Local<v8::Context> context = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), v8::MaybeLocal<v8::Value>(),v8::DeserializeInternalFieldsCallback(), microtaskQueue);
+    int data = 0;
+    isolate->EnqueueMicrotask([](void* data) -> void{
+        (*static_cast<int*>(data))++;
+    }, &data);
+    EXPECT_TRUE(context->GetMicrotaskQueue() == microtaskQueue);
+    microtaskQueue->PerformCheckpoint(isolate);
+    EXPECT_TRUE(data == 1);
+}
+
 TEST_F(Environment, Global) {
     v8::Isolate *isolate = getIsolate();
     v8::Locker locker(isolate);
@@ -251,4 +262,105 @@ TEST_F(Environment, Global) {
 
     EXPECT_TRUE(setTimeout->IsFunction());
 
+}
+
+TEST_F(Environment, SecurityChecks) {
+    v8::Isolate *isolate = getIsolate();
+    v8::Locker locker(isolate);
+    v8::HandleScope handleScope(isolate);
+    v8::Local<v8::String> mainDomain = v8::String::NewFromUtf8Literal(isolate, "https://liebao.cn");
+    v8::Local<v8::String> otherDomain = v8::String::NewFromUtf8Literal(isolate, "https:://pdf.liebao.cn");
+    v8::Local<v8::Context> context = v8::Context::New(isolate);
+    v8::Context::Scope context_scope(context);
+    context->SetSecurityToken(mainDomain);
+    // 在全局函数中注入 fun 函数 和全局变量 global
+    const char* source = "function fun () {\n"
+                        " return this.global;\n"
+                       "};"
+                       "var global = 0;";
+    v8::Script::Compile(context,v8::String::NewFromUtf8(isolate,source).ToLocalChecked()).ToLocalChecked()
+            ->Run(context).ToLocalChecked();
+    // 获取编译全局函数fun
+    v8::Local<v8::Function> fun = context->Global()->Get(context, v8::String::NewFromUtf8Literal(isolate, "fun")).ToLocalChecked().As<v8::Function>();
+    // 获取全局变量
+    v8::Local<v8::Number> global = context->Global()->Get(context, v8::String::NewFromUtf8Literal(isolate, "global")).ToLocalChecked().As<v8::Number>();
+    EXPECT_TRUE(global->Value() == 0);
+
+    {
+        v8::Local<v8::Context> context1 = v8::Context::New(isolate);
+        v8::Context::Scope context_scope1(context1);
+        // 设置和外部上下文同一个 SetSecurityToken
+        context1->SetSecurityToken(mainDomain);
+        // 设置全局变量
+        v8::Script::Compile(context1,v8::String::NewFromUtf8(isolate,"var global= 1;").ToLocalChecked()).ToLocalChecked()
+                ->Run(context1).ToLocalChecked();
+        v8::Local<v8::Value> result = fun->Call(context1, context1->Global(), 0, {}).ToLocalChecked();
+        EXPECT_TRUE(result->IsNumber());
+        EXPECT_TRUE(result.As<v8::Number>()->Value() == 1);
+    }
+    {
+        v8::Local<v8::Context> context2 = v8::Context::New(isolate);
+        v8::Context::Scope context_scope1(context2);
+        // 设置新的 securityToken
+        context2->SetSecurityToken(otherDomain);
+        v8::TryCatch tryCatch(isolate);
+        EXPECT_TRUE(fun->Call(context2, context2->Global(), 0, {}).IsEmpty());
+        EXPECT_TRUE(tryCatch.HasCaught());
+    }
+    {
+        v8::Local<v8::Context> context3 = v8::Context::New(isolate);
+        v8::Context::Scope context_scope3(context3);
+        context3->SetSecurityToken(mainDomain);
+        // 使用 parent设置context3的全局对象对 context的全局上下文的引用。
+        context3->Global()->Set(context3, v8::String::NewFromUtf8Literal(isolate, "parent"), context->Global()).FromJust();
+        const char* source = "function fun () {\n"
+                             " return 1;\n"
+                             "};"
+                             "parent.fun();";
+        v8::Local<v8::Value> result = v8::Script::Compile(context3,v8::String::NewFromUtf8(isolate, source).ToLocalChecked()).ToLocalChecked()
+                ->Run(context3).ToLocalChecked();
+        EXPECT_TRUE(result->IsNumber());
+        EXPECT_TRUE(result.As<v8::Number>()->Value() == 0);
+
+        // 使用 iframe3设置context1的全局对象对 context3的全局上下文的引用。
+        context->Global()->Set(context, v8::String::NewFromUtf8Literal(isolate, "iframe3"), context3->Global()).FromJust();
+        result = v8::Script::Compile(context,v8::String::NewFromUtf8(isolate, "iframe3.fun();").ToLocalChecked()).ToLocalChecked()
+                ->Run(context).ToLocalChecked();
+        EXPECT_TRUE(result->IsNumber());
+        EXPECT_TRUE(result.As<v8::Number>()->Value() == 1);
+    }
+    {
+        v8::Local<v8::Context> context4 = v8::Context::New(isolate);
+        v8::Context::Scope context_scope4(context4);
+        context4->SetSecurityToken(otherDomain);
+        // 使用 parent设置context3的全局对象对 context的全局上下文的引用。
+        context4->Global()->Set(context4, v8::String::NewFromUtf8Literal(isolate, "parent"), context->Global()).FromJust();
+
+        v8::TryCatch tryCatch(isolate);
+        EXPECT_TRUE(v8::Script::Compile(context4,v8::String::NewFromUtf8(isolate, "parent.fun()").ToLocalChecked()).ToLocalChecked()
+                ->Run(context4).IsEmpty());
+        EXPECT_TRUE(tryCatch.HasCaught());
+    }
+}
+TEST_F(Environment, embedderData) {
+    v8::Isolate *isolate = getIsolate();
+    v8::Locker locker(isolate);
+    v8::HandleScope handleScope(isolate);
+    v8::Local<v8::Context> context = v8::Context::New(isolate);
+    v8::Context::Scope context_scope(context);
+    // 获取相对当前隔离实例唯一插槽域
+    uint32_t index = context->GetNumberOfEmbedderDataFields();
+    v8::Local<v8::String> data = v8::String::NewFromUtf8Literal(isolate, "data");
+    context->SetEmbedderData(index, data);
+
+    v8::Persistent<v8::Context, v8::CopyablePersistentTraits<v8::Context>> persistentContext(isolate, context);
+    std::thread thread([](v8::Isolate* isolate, v8::Persistent<v8::Context, v8::CopyablePersistentTraits<v8::Context>> persistentContext, uint32_t index){
+        v8::HandleScope handleScope(isolate);
+        v8::Local<v8::Context> context = persistentContext.Get(isolate);
+        EXPECT_TRUE(context->GetEmbedderData(index)->IsString());
+        EXPECT_TRUE(context->GetEmbedderData(index).As<v8::String>()->StringEquals(v8::String::NewFromUtf8Literal(isolate, "data")));
+    }, isolate, persistentContext, index);
+    thread.join();
+    EXPECT_TRUE(context->GetEmbedderData(index)->IsString());
+    EXPECT_TRUE(context->GetEmbedderData(index).As<v8::String>()->StringEquals(v8::String::NewFromUtf8Literal(isolate, "data")));
 }
