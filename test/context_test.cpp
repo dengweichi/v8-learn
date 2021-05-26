@@ -161,6 +161,7 @@ TEST_F(Environment, context_globalObject) {
       // 把context1的全局对象作为创建 context2
       v8::Local<v8::Context> context2 = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), global1);
       EXPECT_FALSE(global1->Equals(context1, context1->Global()).FromJust());
+
       context2->Enter();
       context2->SetSecurityToken(securityToken);
       v8::Local<v8::Object> global2 = context2->Global();
@@ -190,15 +191,6 @@ TEST_F(Environment, context_globalObject) {
         context1->Exit();
       }
     }
-}
-
-TEST_F(Environment, context_sandbox) {
-  v8::Isolate *isolate = getIsolate();
-  v8::Locker locker(isolate);
-  v8::HandleScope handleScope(isolate);
-  v8::Local<v8::String> securityToken = v8::String::NewFromUtf8Literal(isolate, "Password");
-  v8::Local<v8::Context> context = v8::Context::New(isolate, nullptr);
-
 }
 
 
@@ -513,17 +505,14 @@ TEST_F(Environment,context_NewRemoteContext) {
   v8::Isolate *isolate = getIsolate();
   v8::Locker locker(isolate);
   v8::HandleScope handleScope(isolate);
-  v8::Local<v8::ObjectTemplate> objectTemplate = v8::ObjectTemplate::New(isolate);
-  // 提供 对象模板访问检查回调。下面章节做做出解析
-  objectTemplate->SetAccessCheckCallback([](
-                                             v8::Local<v8::Context> accessing_context,
-                                            v8::Local<v8::Object> accessed_object,
-                                            v8::Local<v8::Value> data) -> bool {
-                  return  true;
-                });
-  
-  objectTemplate->Set(isolate, "property", v8::Number::New(isolate, 1));
-  v8::Local<v8::Object> globalObject = v8::Context::NewRemoteContext(isolate, objectTemplate).ToLocalChecked();
-  v8::Local<v8::Context> context = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), globalObject);
-  EXPECT_TRUE(globalObject->Equals(context, context->Global()).FromJust());
+  v8::Local<v8::String> mainDomain = v8::String::NewFromUtf8Literal(isolate, "https://liebao.cn");
+  v8::Local<v8::Context> context1 = v8::Context::New(isolate);
+  context1->SetSecurityToken(mainDomain);
+  v8::Local<v8::Object> global1 = context1->Global();
+  EXPECT_TRUE(global1->Set(context1, v8::String::NewFromUtf8Literal(isolate, "property"), v8::Number::New(isolate, 1)).FromJust());
+
+  v8::Local<v8::Object> globalObject = v8::Context::NewRemoteContext(isolate, v8::Local<v8::ObjectTemplate>(), global1).ToLocalChecked();
+  v8::Local<v8::Context> context2 = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), globalObject);
+  context2->SetSecurityToken(mainDomain);
+  EXPECT_TRUE(context2->Global()->Get(context2, v8::String::NewFromUtf8Literal(isolate, "property")).IsEmpty());
 }
