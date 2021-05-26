@@ -161,6 +161,7 @@ TEST_F(Environment, context_globalObject) {
       // 把context1的全局对象作为创建 context2
       v8::Local<v8::Context> context2 = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), global1);
       EXPECT_FALSE(global1->Equals(context1, context1->Global()).FromJust());
+
       context2->Enter();
       context2->SetSecurityToken(securityToken);
       v8::Local<v8::Object> global2 = context2->Global();
@@ -190,15 +191,6 @@ TEST_F(Environment, context_globalObject) {
         context1->Exit();
       }
     }
-}
-
-TEST_F(Environment, context_sandbox) {
-  v8::Isolate *isolate = getIsolate();
-  v8::Locker locker(isolate);
-  v8::HandleScope handleScope(isolate);
-  v8::Local<v8::String> securityToken = v8::String::NewFromUtf8Literal(isolate, "Password");
-  v8::Local<v8::Context> context = v8::Context::New(isolate, nullptr);
-
 }
 
 
