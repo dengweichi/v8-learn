@@ -484,12 +484,15 @@ TEST_F(Environment,context_DetachGlobal) {
     EXPECT_TRUE(v8::Script::Compile(context2, v8::String::NewFromUtf8Literal(
         isolate, "parent.property")).ToLocalChecked()->Run(context2).IsEmpty());
     EXPECT_TRUE(tryCatch.HasCaught());
+    // global1全局对象被分离，但还是存在，只是不能访问。
+    EXPECT_TRUE(context2->Global()->Get(context2, v8::String::NewFromUtf8Literal(isolate, "parent")).ToLocalChecked()->IsObject());
   }
 
   // 把 context1 分离的全局对象绑定到 context3
   v8::Local<v8::Context> context3 = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), global1);
   context3->SetSecurityToken(mainDomain);
   EXPECT_TRUE(global1->Equals(context3, context3->Global()).FromJust());
+  EXPECT_TRUE(global1->Equals(context2, context2->Global()->Get(context2, v8::String::NewFromUtf8Literal(isolate, "parent")).ToLocalChecked()).FromJust());
   EXPECT_FALSE(context1->Global()->Equals(context3, context3->Global()).FromJust());
   {
     v8::Context::Scope context_scope(context3);
@@ -508,22 +511,79 @@ TEST_F(Environment,context_DetachGlobal) {
         isolate, "parent.property")).ToLocalChecked()->Run(context2).ToLocalChecked()->ToInt32(context2).ToLocalChecked()->Value() == 2);
   }
 }
+bool propertyAccessCheckCallback(v8::Local<v8::Context> accessing_context,
+                                 v8::Local<v8::Object> accessed_object,
+                                 v8::Local<v8::Value> data) {
+    return true;
+}
+void propertyGetter (v8::Local<v8::Name> property,
+                     const v8::PropertyCallbackInfo<v8::Value>& info) {
+    info.GetReturnValue().Set(1);
+}
+void propertySetter(v8::Local<v8::Name> property, v8::Local<v8::Value> value,
+                const v8::PropertyCallbackInfo<v8::Value>& info){
 
-TEST_F(Environment,context_NewRemoteContext) {
-  v8::Isolate *isolate = getIsolate();
-  v8::Locker locker(isolate);
-  v8::HandleScope handleScope(isolate);
-  v8::Local<v8::ObjectTemplate> objectTemplate = v8::ObjectTemplate::New(isolate);
-  // 提供 对象模板访问检查回调。下面章节做做出解析
-  objectTemplate->SetAccessCheckCallback([](
-                                             v8::Local<v8::Context> accessing_context,
-                                            v8::Local<v8::Object> accessed_object,
-                                            v8::Local<v8::Value> data) -> bool {
-                  return  true;
-                });
-  
-  objectTemplate->Set(isolate, "property", v8::Number::New(isolate, 1));
-  v8::Local<v8::Object> globalObject = v8::Context::NewRemoteContext(isolate, objectTemplate).ToLocalChecked();
-  v8::Local<v8::Context> context = v8::Context::New(isolate, nullptr, v8::MaybeLocal<v8::ObjectTemplate>(), globalObject);
-  EXPECT_TRUE(globalObject->Equals(context, context->Global()).FromJust());
+}
+void propertyQuery (v8::Local<v8::Name> property,
+                    const v8::PropertyCallbackInfo<v8::Integer>& info) {
+
+}
+
+void propertyDelete (v8::Local<v8::Name> property,
+                     const v8::PropertyCallbackInfo<v8::Boolean>& info) {
+
+}
+void propertyEnumerator (const v8::PropertyCallbackInfo<v8::Array>& info) {
+
+}
+void indexedPropertyGetter (uint32_t index,
+                    const v8::PropertyCallbackInfo<v8::Value>& info) {
+
+}
+void indexPropertySetter (uint32_t index, v8::Local<v8::Value> value,
+                  const v8::PropertyCallbackInfo<v8::Value>& info) {
+
+}
+void indexPropertyQuery (uint32_t index,
+                         const v8::PropertyCallbackInfo<v8::Integer>& info) {
+
+}
+void indexPropertyDelete (uint32_t index,
+                          const v8::PropertyCallbackInfo<v8::Boolean>& info) {
+
+}
+void indexPropertyEnumerator(const v8::PropertyCallbackInfo<v8::Array>& info) {
+
+}
+
+TEST_F(Environment, context_NewRemoteContext) {
+    v8::Isolate *isolate = getIsolate();
+    v8::Locker locker(isolate);
+    v8::HandleScope handleScope(isolate);
+    v8::Local<v8::ObjectTemplate> objectTemplate = v8::ObjectTemplate::New(isolate);
+    // 属性访问处理器。包括普通属性和索引属性的 setter, gettter, query, delete, property。类似于代理。
+    objectTemplate->SetAccessCheckCallbackAndHandler(propertyAccessCheckCallback,
+                                                     v8::NamedPropertyHandlerConfiguration(propertyGetter,
+                                                                                           propertySetter,
+                                                                                           propertyQuery,
+                                                                                           propertyDelete,
+                                                                                           propertyEnumerator),
+                                                     v8::IndexedPropertyHandlerConfiguration(indexedPropertyGetter,
+                                                                                             indexPropertySetter,
+                                                                                             indexPropertyQuery,
+                                                                                             indexPropertyDelete,
+                                                                                             indexPropertyEnumerator)
+    );
+    v8::Local<v8::Object> globalObject = v8::Context::NewRemoteContext(isolate, objectTemplate).ToLocalChecked();
+    {
+        v8::Local<v8::Context> context1 = v8::Context::New(isolate);
+        v8::Context::Scope context_scope(context1);
+        EXPECT_TRUE(globalObject->Get(context1, v8::String::NewFromUtf8Literal(isolate, "property")).ToLocalChecked().As<v8::Number>()->Value() == 1);
+    }
+    {
+        v8::Local<v8::Context> context2 = v8::Context::New(isolate);
+        v8::Context::Scope context_scope(context2);
+        EXPECT_TRUE(globalObject->Get(context2, v8::String::NewFromUtf8Literal(isolate, "property")).ToLocalChecked().As<v8::Number>()->Value() == 1);
+    }
+
 }
