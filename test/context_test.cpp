@@ -108,7 +108,7 @@ TEST_F(Environment, context_GlobalObjectTemplate) {
     objectTemplate->Set(isolate, "fun", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& info) -> void {
         info.GetReturnValue().Set(2);
     }));
-    // 设置内置数组变量同名的属性
+    // 设置内置数组变量同名的属性.
     objectTemplate->Set(isolate, "Array", v8::String::NewFromUtf8Literal(isolate, "Array"));
     {
         v8::Local<v8::Context> context1 = v8::Context::New(isolate, nullptr,  objectTemplate);
