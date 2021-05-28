@@ -12,16 +12,16 @@ class Handle {
 private:
   T* _ptr;
 public:
-  Handle(T* ptr):_ptr(ptr) {};
+  explicit Handle(T* ptr):_ptr(ptr) {};
   template <class S>
   bool operator==(Handle<S>& that) {
-    return this->_ptr == that._ptr;
+    return _ptr == that._ptr;
   };
   bool isEmpty () {
-      return this->_ptr == nullptr;
+    return _ptr == nullptr;
   }
   void clear () {
-    this->_ptr = nullptr;
+    _ptr = nullptr;
   }
   T* operator->() const { return _ptr; }
 

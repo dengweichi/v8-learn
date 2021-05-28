@@ -502,10 +502,10 @@ TEST_F(Environment, MessageListener) {
     isolate->AddMessageListenerWithErrorLevel(warningListener, v8::Isolate::kMessageAll);
     // 没有声明
     const char* source =  " params = 1;";
-    EXPECT_TRUE(v8::Script::Compile(context,
+    v8::Script::Compile(context,
                         v8::String::NewFromUtf8(isolate, source).ToLocalChecked())
         .ToLocalChecked()
-        ->Run(context).IsEmpty());
+        ->Run(context).ToLocalChecked();
     isolate->RemoveMessageListeners( warningListener);
   }
   {
