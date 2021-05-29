@@ -185,7 +185,7 @@ TEST(isolate_test, scope) {
   delete create_params.array_buffer_allocator;
 }
 
-TEST_F(Environment, data) {
+TEST_F(Environment, isolate_data) {
   v8::Isolate* isolate = getIsolate();
   uint32_t slot = isolate->GetNumberOfDataSlots();
   std::string* data = new std::string("string");
