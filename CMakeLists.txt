@@ -18,7 +18,7 @@ add_executable(v8_learn
         test/context_test.cpp
         test/handle_test.cpp
         test/handle_scope_test.cpp
-        test/primtive_test.cpp)
+        test/primtive_test.cpp test/extension_test.cpp)
 target_link_libraries(v8_learn ${PROJECT_SOURCE_DIR}/deps/v8/libv8_monolith.a ${PROJECT_SOURCE_DIR}/deps/v8/libv8_libplatform.a ${PROJECT_SOURCE_DIR}/deps/v8/libv8_libbase.a)
 
 target_link_libraries(v8_learn gtest gtest_main)
