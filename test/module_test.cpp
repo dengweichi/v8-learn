@@ -24,6 +24,42 @@ TEST_F(Environment, module_classic_test) {
   EXPECT_TRUE(result.As<v8::Number>()->Value() == 3);
 }
 
+
+void module (v8::Local<v8::Object> exports) {
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    v8::Local<v8::Context> context = isolate->GetCurrentContext();
+    // 设置 add函数
+    exports->Set(context, v8::String::NewFromUtf8Literal(isolate, "add"),
+                 v8::Function::New(context, [](const v8::FunctionCallbackInfo<v8::Value> &info) -> void {
+                   v8::Isolate* isolate = info.GetIsolate();
+                   // 参数校验
+                   if (info.Length() != 2 || !info[0]->IsNumber() && !info[1]->IsNumber()) {
+                     isolate->ThrowException(v8::String::NewFromUtf8Literal(isolate, "参数错误"));
+                     return;
+                   }
+                   float first = info[0].As<v8::Number>()->Value();
+                   float second = info[1].As<v8::Number>()->Value();
+                   float result = first + second;
+                   info.GetReturnValue().Set(v8::Number::New(isolate, result));
+                 }).ToLocalChecked()).FromJust();
+    // 设置属性result = 1;
+    exports->Set(context, v8::String::NewFromUtf8Literal(isolate, "result"), v8::Number::New(isolate, 1)).FromJust();
+}
+
+TEST_F(Environment, module_commonjs_test) {
+  v8::Isolate* isolate = getIsolate();
+  v8::HandleScope handleScope(isolate);
+  v8::Local<v8::Context> context = v8::Context::New(isolate);
+  v8::Context::Scope context_scope(context);
+  v8::Local<v8::Object> exports = v8::Object::New(isolate);
+  module(exports);
+  // 获取moudle函数执行暴露的变量和函数
+  v8::Local<v8::Function> add = exports->Get(context, v8::String::NewFromUtf8Literal(isolate, "add")).ToLocalChecked().As<v8::Function>();
+  v8::Local<v8::Number> result = exports->Get(context, v8::String::NewFromUtf8Literal(isolate, "result")).ToLocalChecked().As<v8::Number>();
+  v8::Local<v8::Value> argv[] =  { v8::Number::New(isolate, 1), result};
+  EXPECT_TRUE(add->Call(context, context->Global(), 2, argv).ToLocalChecked().As<v8::Number>()->Value() == 2);
+};
+
 v8::MaybeLocal<v8::Module> resolveModule (v8::Local<v8::Context> context, v8::Local<v8::String> specifier,
                                           v8::Local<v8::FixedArray> import_assertions, v8::Local<v8::Module> referrer) {
   v8::Isolate* isolate = context->GetIsolate();
@@ -48,6 +84,8 @@ v8::MaybeLocal<v8::Module> resolveModule (v8::Local<v8::Context> context, v8::Lo
     return module;
   }
 }
+
+
 TEST_F(Environment, module_esmodule_test) {
   v8::Isolate* isolate = getIsolate();
   v8::HandleScope handleScope(isolate);
