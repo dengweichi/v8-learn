@@ -28,7 +28,6 @@ add_executable(${PROJECT_NAME}
         test/context_test.cpp
         test/handle_test.cpp
         test/handle_scope_test.cpp
-        test/promise_test.cpp
         test/primtive_test.cpp
         test/extension_test.cpp
         test/module_test.cpp
