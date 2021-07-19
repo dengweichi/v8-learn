@@ -197,7 +197,7 @@ class ConsoleCallArguments;
  */
 template <class T>
 class Local {
-public:
+ public:
   V8_INLINE Local() : val_(nullptr) {}
   template <class S>
   V8_INLINE Local(Local<S> that)
@@ -307,7 +307,7 @@ public:
   V8_INLINE static Local<T> New(Isolate* isolate,
                                 const BasicTracedReference<T>& that);
 
-private:
+ private:
   friend class TracedReferenceBase;
   friend class Utils;
   template<class F> friend class Eternal;
@@ -369,7 +369,7 @@ using Handle = Local<T>;
  */
 template <class T>
 class MaybeLocal {
-public:
+ public:
   V8_INLINE MaybeLocal() : val_(nullptr) {}
   template <class S>
   V8_INLINE MaybeLocal(Local<S> that)
@@ -404,7 +404,7 @@ public:
     return IsEmpty() ? default_value : Local<S>(val_);
   }
 
-private:
+ private:
   T* val_;
 };
 
@@ -413,7 +413,7 @@ private:
  * isolate.
  */
 template <class T> class Eternal {
-public:
+ public:
   V8_INLINE Eternal() : val_(nullptr) {}
   template <class S>
   V8_INLINE Eternal(Isolate* isolate, Local<S> handle) : val_(nullptr) {
@@ -424,7 +424,7 @@ public:
   V8_INLINE bool IsEmpty() const { return val_ == nullptr; }
   template<class S> V8_INLINE void Set(Isolate* isolate, Local<S> handle);
 
-private:
+ private:
   T* val_;
 };
 
@@ -434,7 +434,7 @@ static const int kEmbedderFieldsInWeakCallback = 2;
 
 template <typename T>
 class WeakCallbackInfo {
-public:
+ public:
   using Callback = void (*)(const WeakCallbackInfo<T>& data);
 
   WeakCallbackInfo(Isolate* isolate, T* parameter,
@@ -458,7 +458,7 @@ public:
   // Calling SetSecondPassCallback on the second pass will immediately crash.
   void SetSecondPassCallback(Callback callback) const { *callback_ = callback; }
 
-private:
+ private:
   Isolate* isolate_;
   T* parameter_;
   Callback* callback_;
@@ -487,7 +487,7 @@ enum class WeakCallbackType { kParameter, kInternalFields, kFinalizer };
  *
  */
 template <class T> class PersistentBase {
-public:
+ public:
   /**
    * If non-empty, destroy the underlying storage cell
    * IsEmpty() will return true after this call.
@@ -599,7 +599,7 @@ public:
   PersistentBase(const PersistentBase& other) = delete;  // NOLINT
   void operator=(const PersistentBase&) = delete;
 
-private:
+ private:
   friend class Isolate;
   friend class Utils;
   template<class F> friend class Local;
@@ -628,7 +628,7 @@ private:
  */
 template<class T>
 class NonCopyablePersistentTraits {
-public:
+ public:
   using NonCopyablePersistent = Persistent<T, NonCopyablePersistentTraits<T>>;
   static const bool kResetInDestructor = false;
   template<class S, class M>
@@ -665,7 +665,7 @@ struct CopyablePersistentTraits {
  * Note: Persistent class hierarchy is subject to future changes.
  */
 template <class T, class M> class Persistent : public PersistentBase<T> {
-public:
+ public:
   /**
    * A Persistent with no storage cell.
    */
@@ -687,7 +687,7 @@ public:
    */
   template <class S, class M2>
   V8_INLINE Persistent(Isolate* isolate, const Persistent<S, M2>& that)
-      : PersistentBase<T>(PersistentBase<T>::New(isolate, *that)) {
+    : PersistentBase<T>(PersistentBase<T>::New(isolate, *that)) {
     static_assert(std::is_base_of<T, S>::value, "type check");
   }
   /**
@@ -738,7 +738,7 @@ public:
     return Persistent<S>::Cast(*this);
   }
 
-private:
+ private:
   friend class Isolate;
   friend class Utils;
   template<class F> friend class Local;
@@ -759,7 +759,7 @@ private:
  */
 template <class T>
 class Global : public PersistentBase<T> {
-public:
+ public:
   /**
    * A Global with no storage cell.
    */
@@ -813,7 +813,7 @@ public:
   Global(const Global&) = delete;
   void operator=(const Global&) = delete;
 
-private:
+ private:
   template <class F>
   friend class ReturnValue;
   V8_INLINE T* operator*() const { return this->val_; }
@@ -831,7 +831,7 @@ template <typename T>
 struct TracedGlobalTrait {};
 
 class TracedReferenceBase {
-public:
+ public:
   /**
    * Returns true if the reference is empty, i.e., has not been assigned
    * object.
@@ -868,7 +868,7 @@ public:
    */
   V8_INLINE uint16_t WrapperClassId() const;
 
-protected:
+ protected:
   /**
    * Update this reference in a thread-safe way.
    */
@@ -914,7 +914,7 @@ protected:
  */
 template <typename T>
 class BasicTracedReference : public TracedReferenceBase {
-public:
+ public:
   /**
    * Construct a Local<T> from this handle.
    */
@@ -929,7 +929,7 @@ public:
   T* operator->() const { return reinterpret_cast<T*>(val_); }
   T* operator*() const { return reinterpret_cast<T*>(val_); }
 
-private:
+ private:
   enum DestructionMode { kWithDestructor, kWithoutDestructor };
 
   /**
@@ -960,7 +960,7 @@ private:
  */
 template <typename T>
 class TracedGlobal : public BasicTracedReference<T> {
-public:
+ public:
   using BasicTracedReference<T>::Reset;
 
   /**
@@ -1088,7 +1088,7 @@ public:
  */
 template <typename T>
 class TracedReference : public BasicTracedReference<T> {
-public:
+ public:
   using BasicTracedReference<T>::Reset;
 
   /**
@@ -1183,22 +1183,22 @@ public:
   }
 };
 
-/**
-* A stack-allocated class that governs a number of local handles.
-* After a handle scope has been created, all local handles will be
-* allocated within that handle scope until either the handle scope is
-* deleted or another handle scope is created.  If there is already a
-* handle scope and a new one is created, all allocations will take
-* place in the new handle scope until it is deleted.  After that,
-* new handles will again be allocated in the original handle scope.
-*
-* After the handle scope of a local handle has been deleted the
-* garbage collector will no longer track the object stored in the
-* handle and may deallocate it.  The behavior of accessing a handle
-* for which the handle scope has been deleted is undefined.
-*/
+ /**
+ * A stack-allocated class that governs a number of local handles.
+ * After a handle scope has been created, all local handles will be
+ * allocated within that handle scope until either the handle scope is
+ * deleted or another handle scope is created.  If there is already a
+ * handle scope and a new one is created, all allocations will take
+ * place in the new handle scope until it is deleted.  After that,
+ * new handles will again be allocated in the original handle scope.
+ *
+ * After the handle scope of a local handle has been deleted the
+ * garbage collector will no longer track the object stored in the
+ * handle and may deallocate it.  The behavior of accessing a handle
+ * for which the handle scope has been deleted is undefined.
+ */
 class V8_EXPORT V8_NODISCARD HandleScope {
-public:
+ public:
   explicit HandleScope(Isolate* isolate);
 
   ~HandleScope();
@@ -1215,7 +1215,7 @@ public:
   HandleScope(const HandleScope&) = delete;
   void operator=(const HandleScope&) = delete;
 
-protected:
+ protected:
   V8_INLINE HandleScope() = default;
 
   void Initialize(Isolate* isolate);
@@ -1223,7 +1223,7 @@ protected:
   static internal::Address* CreateHandle(internal::Isolate* isolate,
                                          internal::Address value);
 
-private:
+ private:
   // Declaring operator new and delete as deleted is not spec compliant.
   // Therefore declare them private instead to disable dynamic alloc
   void* operator new(size_t size);
@@ -1249,7 +1249,7 @@ private:
  * which will be later filled with the escape value.
  */
 class V8_EXPORT V8_NODISCARD EscapableHandleScope : public HandleScope {
-public:
+ public:
   explicit EscapableHandleScope(Isolate* isolate);
   V8_INLINE ~EscapableHandleScope() = default;
 
@@ -1272,7 +1272,7 @@ public:
   EscapableHandleScope(const EscapableHandleScope&) = delete;
   void operator=(const EscapableHandleScope&) = delete;
 
-private:
+ private:
   // Declaring operator new and delete as deleted is not spec compliant.
   // Therefore declare them private instead to disable dynamic alloc
   void* operator new(size_t size);
@@ -1288,19 +1288,16 @@ private:
  * A SealHandleScope acts like a handle scope in which no handle allocations
  * are allowed. It can be useful for debugging handle leaks.
  * Handles can be allocated within inner normal HandleScopes.
- * SealHandleScope的作用类似于没有分配句柄的句柄范围
- * 被允许。 这对于调试句柄泄漏很有用。
- *可以在内部普通HandleScope范围内分配句柄。
  */
 class V8_EXPORT V8_NODISCARD SealHandleScope {
-public:
+ public:
   explicit SealHandleScope(Isolate* isolate);
   ~SealHandleScope();
 
   SealHandleScope(const SealHandleScope&) = delete;
   void operator=(const SealHandleScope&) = delete;
 
-private:
+ private:
   // Declaring operator new and delete as deleted is not spec compliant.
   // Therefore declare them private instead to disable dynamic alloc
   void* operator new(size_t size);
@@ -1319,7 +1316,7 @@ private:
  * The superclass of objects that can reside on V8's heap.
  */
 class V8_EXPORT Data {
-public:
+ public:
   /**
    * Returns true if this data is a |v8::Value|.
    */
@@ -1350,7 +1347,7 @@ public:
    */
   bool IsContext() const;
 
-private:
+ private:
   Data();
 };
 
@@ -1361,7 +1358,7 @@ private:
  * HostImportModuleDynamicallyCallback for module loading.
  */
 class V8_EXPORT ScriptOrModule {
-public:
+ public:
   /**
    * The name that was passed by the embedder as ResourceName to the
    * ScriptOrigin. This can be either a v8::String or v8::Undefined.
@@ -1384,7 +1381,7 @@ public:
  *
  */
 class V8_EXPORT PrimitiveArray {
-public:
+ public:
   static Local<PrimitiveArray> New(Isolate* isolate, int length);
   int Length() const;
   void Set(Isolate* isolate, int index, Local<Primitive> item);
@@ -1395,7 +1392,7 @@ public:
  * The optional attributes of ScriptOrigin.
  */
 class ScriptOriginOptions {
-public:
+ public:
   V8_INLINE ScriptOriginOptions(bool is_shared_cross_origin = false,
                                 bool is_opaque = false, bool is_wasm = false,
                                 bool is_module = false)
@@ -1415,7 +1412,7 @@ public:
 
   int Flags() const { return flags_; }
 
-private:
+ private:
   enum {
     kIsSharedCrossOrigin = 1,
     kIsOpaque = 1 << 1,
@@ -1429,7 +1426,7 @@ private:
  * The origin, within a file, of a script.
  */
 class ScriptOrigin {
-public:
+ public:
   V8_DEPRECATE_SOON("Use constructor with primitive C++ types")
   V8_INLINE explicit ScriptOrigin(
       Local<Value> resource_name, Local<Integer> resource_line_offset,
@@ -1473,7 +1470,7 @@ public:
   V8_INLINE Local<PrimitiveArray> HostDefinedOptions() const;
   V8_INLINE ScriptOriginOptions Options() const { return options_; }
 
-private:
+ private:
   Isolate* isolate_;
   Local<Value> resource_name_;
   int resource_line_offset_;
@@ -1486,10 +1483,9 @@ private:
 
 /**
  * A compiled JavaScript script, not yet tied to a Context.
- * 尚未绑定到上下文的已编译JavaScript脚本。
  */
 class V8_EXPORT UnboundScript {
-public:
+ public:
   /**
    * Binds the script to the currently entered context.
    */
@@ -1527,14 +1523,14 @@ class V8_EXPORT UnboundModuleScript : public Data {
  * A location in JavaScript source.
  */
 class V8_EXPORT Location {
-public:
+ public:
   int GetLineNumber() { return line_number_; }
   int GetColumnNumber() { return column_number_; }
 
   Location(int line_number, int column_number)
       : line_number_(line_number), column_number_(column_number) {}
 
-private:
+ private:
   int line_number_;
   int column_number_;
 };
@@ -1543,13 +1539,13 @@ private:
  * A fixed-sized array with elements of type Data.
  */
 class V8_EXPORT FixedArray : public Data {
-public:
+ public:
   int Length() const;
   Local<Data> Get(Local<Context> context, int i) const;
 };
 
 class V8_EXPORT ModuleRequest : public Data {
-public:
+ public:
   /**
    * Returns the module specifier for this ModuleRequest.
    */
@@ -1579,7 +1575,7 @@ public:
 
   V8_INLINE static ModuleRequest* Cast(Data* data);
 
-private:
+ private:
   static void CheckCast(Data* obj);
 };
 
@@ -1587,7 +1583,7 @@ private:
  * A compiled JavaScript module.
  */
 class V8_EXPORT Module : public Data {
-public:
+ public:
   /**
    * The different states a module can be in.
    *
@@ -1654,8 +1650,8 @@ public:
   int GetIdentityHash() const;
 
   using ResolveCallback V8_DEPRECATE_SOON("Use ResolveModuleCallback") =
-  MaybeLocal<Module> (*)(Local<Context> context, Local<String> specifier,
-                         Local<Module> referrer);
+      MaybeLocal<Module> (*)(Local<Context> context, Local<String> specifier,
+                             Local<Module> referrer);
   using ResolveModuleCallback = MaybeLocal<Module> (*)(
       Local<Context> context, Local<String> specifier,
       Local<FixedArray> import_assertions, Local<Module> referrer);
@@ -1733,7 +1729,7 @@ public:
    * (where an exception was thrown).
    */
   using SyntheticModuleEvaluationSteps =
-  MaybeLocal<Value> (*)(Local<Context> context, Local<Module> module);
+      MaybeLocal<Value> (*)(Local<Context> context, Local<Module> module);
 
   /**
    * Creates a new SyntheticModule with the specified export names, where
@@ -1766,7 +1762,7 @@ public:
 
   V8_INLINE static Module* Cast(Data* data);
 
-private:
+ private:
   static void CheckCast(Data* obj);
 };
 
@@ -1775,7 +1771,7 @@ private:
  * script was compiled.
  */
 class V8_EXPORT Script {
-public:
+ public:
   /**
    * A shorthand for ScriptCompiler::Compile().
    */
@@ -1796,14 +1792,13 @@ public:
   Local<UnboundScript> GetUnboundScript();
 };
 
-// classic 经典的
 enum class ScriptType { kClassic, kModule };
 
 /**
  * For compiling scripts.
  */
 class V8_EXPORT ScriptCompiler {
-public:
+ public:
   /**
    * Compilation data that the embedder can cache and pass back to speed up
    * future compilations. The data is produced if the CompilerOptions passed to
@@ -1846,7 +1841,7 @@ public:
    * Source code which can be then compiled to a UnboundScript or Script.
    */
   class Source {
-  public:
+   public:
     // Source takes ownership of CachedData.
     V8_INLINE Source(Local<String> source_string, const ScriptOrigin& origin,
                      CachedData* cached_data = nullptr);
@@ -1865,7 +1860,7 @@ public:
     Source(const Source&) = delete;
     Source& operator=(const Source&) = delete;
 
-  private:
+   private:
     friend class ScriptCompiler;
 
     Local<String> source_string;
@@ -1889,7 +1884,7 @@ public:
    * subclass of this class.
    */
   class V8_EXPORT ExternalSourceStream {
-  public:
+   public:
     virtual ~ExternalSourceStream() = default;
 
     /**
@@ -1940,7 +1935,7 @@ public:
    * below).
    */
   class V8_EXPORT StreamedSource {
-  public:
+   public:
     enum Encoding { ONE_BYTE, TWO_BYTE, UTF8, WINDOWS_1252 };
 
     V8_DEPRECATED(
@@ -1957,7 +1952,7 @@ public:
     StreamedSource(const StreamedSource&) = delete;
     StreamedSource& operator=(const StreamedSource&) = delete;
 
-  private:
+   private:
     std::unique_ptr<internal::ScriptStreamingData> impl_;
   };
 
@@ -1966,10 +1961,10 @@ public:
    * stream scripts into V8. Returned by ScriptCompiler::StartStreaming.
    */
   class V8_EXPORT ScriptStreamingTask final {
-  public:
+   public:
     void Run();
 
-  private:
+   private:
     friend class ScriptCompiler;
 
     explicit ScriptStreamingTask(internal::ScriptStreamingData* data)
@@ -2153,7 +2148,7 @@ public:
    */
   static CachedData* CreateCodeCacheForFunction(Local<Function> function);
 
-private:
+ private:
   static V8_WARN_UNUSED_RESULT MaybeLocal<UnboundScript> CompileUnboundInternal(
       Isolate* isolate, Source* source, CompileOptions options,
       NoCacheReason no_cache_reason);
@@ -2164,7 +2159,7 @@ private:
  * An error message.
  */
 class V8_EXPORT Message {
-public:
+ public:
   Local<String> Get() const;
 
   /**
@@ -2261,7 +2256,7 @@ public:
  * execution continues.
  */
 class V8_EXPORT StackTrace {
-public:
+ public:
   /**
    * Flags that determine what information is placed captured for each
    * StackFrame when grabbing the current stack trace.
@@ -2308,7 +2303,7 @@ public:
  * A single JavaScript stack frame.
  */
 class V8_EXPORT StackFrame {
-public:
+ public:
   /**
    * Returns the number, 1-based, of the line for the associate function call.
    * This method will return Message::kNoLineNumberInfo if it is unable to
@@ -2427,7 +2422,7 @@ struct SampleInfo {
   size_t frames_count;            // Number of frames collected.
   StateTag vm_state;              // Current VM state.
   void* external_callback_entry;  // External callback address if VM is
-  // executing an external callback.
+                                  // executing an external callback.
   void* top_context;              // Incumbent native context address.
 };
 
@@ -2450,7 +2445,7 @@ struct JSEntryStubs {
  * A JSON Parser and Stringifier.
  */
 class V8_EXPORT JSON {
-public:
+ public:
   /**
    * Tries to parse the string |json_string| and returns it as value if
    * successful.
@@ -2479,9 +2474,9 @@ public:
  * The format is backward-compatible (i.e. safe to store to disk).
  */
 class V8_EXPORT ValueSerializer {
-public:
+ public:
   class V8_EXPORT Delegate {
-  public:
+   public:
     virtual ~Delegate() = default;
 
     /**
@@ -2589,7 +2584,7 @@ public:
   ValueSerializer(const ValueSerializer&) = delete;
   void operator=(const ValueSerializer&) = delete;
 
-private:
+ private:
   struct PrivateData;
   PrivateData* private_;
 };
@@ -2599,9 +2594,9 @@ private:
  * implementation.
  */
 class V8_EXPORT ValueDeserializer {
-public:
+ public:
   class V8_EXPORT Delegate {
-  public:
+   public:
     virtual ~Delegate() = default;
 
     /**
@@ -2686,7 +2681,7 @@ public:
   ValueDeserializer(const ValueDeserializer&) = delete;
   void operator=(const ValueDeserializer&) = delete;
 
-private:
+ private:
   struct PrivateData;
   PrivateData* private_;
 };
@@ -2699,7 +2694,7 @@ private:
  * The superclass of all JavaScript values and objects.
  */
 class V8_EXPORT Value : public Data {
-public:
+ public:
   /**
    * Returns true if this value is the undefined value.  See ECMA-262
    * 4.3.10.
@@ -3101,7 +3096,7 @@ public:
 
   Maybe<bool> InstanceOf(Local<Context> context, Local<Object> object);
 
-private:
+ private:
   V8_INLINE bool QuickIsUndefined() const;
   V8_INLINE bool QuickIsNull() const;
   V8_INLINE bool QuickIsNullOrUndefined() const;
@@ -3125,12 +3120,12 @@ class V8_EXPORT Primitive : public Value { };
  * or false value.
  */
 class V8_EXPORT Boolean : public Primitive {
-public:
+ public:
   bool Value() const;
   V8_INLINE static Boolean* Cast(v8::Data* data);
   V8_INLINE static Local<Boolean> New(Isolate* isolate, bool value);
 
-private:
+ private:
   static void CheckCast(v8::Data* that);
 };
 
@@ -3139,7 +3134,7 @@ private:
  * A superclass for symbols and strings.
  */
 class V8_EXPORT Name : public Primitive {
-public:
+ public:
   /**
    * Returns the identity hash for this object. The current implementation
    * uses an inline property on the object to store the identity hash.
@@ -3151,7 +3146,7 @@ public:
 
   V8_INLINE static Name* Cast(Data* data);
 
-private:
+ private:
   static void CheckCast(Data* that);
 };
 
@@ -3179,7 +3174,7 @@ enum class NewStringType {
  * A JavaScript string value (ECMA-262, 4.3.17).
  */
 class V8_EXPORT String : public Name {
-public:
+ public:
   static constexpr int kMaxLength =
       internal::kApiSystemPointerSize == 4 ? (1 << 28) - 16 : (1 << 29) - 24;
 
@@ -3281,7 +3276,7 @@ public:
   bool IsExternalOneByte() const;
 
   class V8_EXPORT ExternalStringResourceBase {  // NOLINT
-  public:
+   public:
     virtual ~ExternalStringResourceBase() = default;
 
     /**
@@ -3295,7 +3290,7 @@ public:
     ExternalStringResourceBase(const ExternalStringResourceBase&) = delete;
     void operator=(const ExternalStringResourceBase&) = delete;
 
-  protected:
+   protected:
     ExternalStringResourceBase() = default;
 
     /**
@@ -3324,7 +3319,7 @@ public:
      */
     virtual void Unlock() const {}
 
-  private:
+   private:
     friend class internal::ExternalString;
     friend class v8::String;
     friend class internal::ScopedExternalStringLock;
@@ -3338,7 +3333,7 @@ public:
    */
   class V8_EXPORT ExternalStringResource
       : public ExternalStringResourceBase {
-  public:
+   public:
     /**
      * Override the destructor to manage the life cycle of the underlying
      * buffer.
@@ -3372,10 +3367,10 @@ public:
      */
     void UpdateDataCache();
 
-  protected:
+   protected:
     ExternalStringResource() = default;
 
-  private:
+   private:
     void CheckCachedDataInvariants() const;
 
     const uint16_t* cached_data_ = nullptr;
@@ -3393,7 +3388,7 @@ public:
 
   class V8_EXPORT ExternalOneByteStringResource
       : public ExternalStringResourceBase {
-  public:
+   public:
     /**
      * Override the destructor to manage the life cycle of the underlying
      * buffer.
@@ -3425,10 +3420,10 @@ public:
      */
     void UpdateDataCache();
 
-  protected:
+   protected:
     ExternalOneByteStringResource() = default;
 
-  private:
+   private:
     void CheckCachedDataInvariants() const;
 
     const char* cached_data_ = nullptr;
@@ -3560,7 +3555,7 @@ public:
    * NULL.
    */
   class V8_EXPORT Utf8Value {
-  public:
+   public:
     Utf8Value(Isolate* isolate, Local<v8::Value> obj);
     ~Utf8Value();
     char* operator*() { return str_; }
@@ -3571,7 +3566,7 @@ public:
     Utf8Value(const Utf8Value&) = delete;
     void operator=(const Utf8Value&) = delete;
 
-  private:
+   private:
     char* str_;
     int length_;
   };
@@ -3583,7 +3578,7 @@ public:
    * returns NULL.
    */
   class V8_EXPORT Value {
-  public:
+   public:
     Value(Isolate* isolate, Local<v8::Value> obj);
     ~Value();
     uint16_t* operator*() { return str_; }
@@ -3594,12 +3589,12 @@ public:
     Value(const Value&) = delete;
     void operator=(const Value&) = delete;
 
-  private:
+   private:
     uint16_t* str_;
     int length_;
   };
 
-private:
+ private:
   void VerifyExternalStringResourceBase(ExternalStringResourceBase* v,
                                         Encoding encoding) const;
   void VerifyExternalStringResource(ExternalStringResource* val) const;
@@ -3626,7 +3621,7 @@ inline V8_WARN_UNUSED_RESULT Local<String> String::NewFromUtf8Literal(
  * A JavaScript symbol (ECMA-262 edition 6)
  */
 class V8_EXPORT Symbol : public Name {
-public:
+ public:
   /**
    * Returns the description string of the symbol, or undefined if none.
    */
@@ -3673,7 +3668,7 @@ public:
 
   V8_INLINE static Symbol* Cast(Data* data);
 
-private:
+ private:
   Symbol();
   static void CheckCast(Data* that);
 };
@@ -3685,7 +3680,7 @@ private:
  * This is an experimental feature. Use at your own risk.
  */
 class V8_EXPORT Private : public Data {
-public:
+ public:
   /**
    * Returns the print name string of the private symbol, or undefined if none.
    */
@@ -3710,7 +3705,7 @@ public:
 
   V8_INLINE static Private* Cast(Data* data);
 
-private:
+ private:
   Private();
 
   static void CheckCast(Data* that);
@@ -3721,12 +3716,12 @@ private:
  * A JavaScript number value (ECMA-262, 4.3.20)
  */
 class V8_EXPORT Number : public Primitive {
-public:
+ public:
   double Value() const;
   static Local<Number> New(Isolate* isolate, double value);
   V8_INLINE static Number* Cast(v8::Data* data);
 
-private:
+ private:
   Number();
   static void CheckCast(v8::Data* that);
 };
@@ -3736,13 +3731,13 @@ private:
  * A JavaScript value representing a signed integer.
  */
 class V8_EXPORT Integer : public Number {
-public:
+ public:
   static Local<Integer> New(Isolate* isolate, int32_t value);
   static Local<Integer> NewFromUnsigned(Isolate* isolate, uint32_t value);
   int64_t Value() const;
   V8_INLINE static Integer* Cast(v8::Data* data);
 
-private:
+ private:
   Integer();
   static void CheckCast(v8::Data* that);
 };
@@ -3752,11 +3747,11 @@ private:
  * A JavaScript value representing a 32-bit signed integer.
  */
 class V8_EXPORT Int32 : public Integer {
-public:
+ public:
   int32_t Value() const;
   V8_INLINE static Int32* Cast(v8::Data* data);
 
-private:
+ private:
   Int32();
   static void CheckCast(v8::Data* that);
 };
@@ -3766,11 +3761,11 @@ private:
  * A JavaScript value representing a 32-bit unsigned integer.
  */
 class V8_EXPORT Uint32 : public Integer {
-public:
+ public:
   uint32_t Value() const;
   V8_INLINE static Uint32* Cast(v8::Data* data);
 
-private:
+ private:
   Uint32();
   static void CheckCast(v8::Data* that);
 };
@@ -3779,7 +3774,7 @@ private:
  * A JavaScript BigInt value (https://tc39.github.io/proposal-bigint)
  */
 class V8_EXPORT BigInt : public Primitive {
-public:
+ public:
   static Local<BigInt> New(Isolate* isolate, int64_t value);
   static Local<BigInt> NewFromUnsigned(Isolate* isolate, uint64_t value);
   /**
@@ -3825,7 +3820,7 @@ public:
 
   V8_INLINE static BigInt* Cast(v8::Data* data);
 
-private:
+ private:
   BigInt();
   static void CheckCast(v8::Data* that);
 };
@@ -3850,16 +3845,16 @@ enum PropertyAttribute {
  * method SetAccessor.
  */
 using AccessorGetterCallback =
-void (*)(Local<String> property, const PropertyCallbackInfo<Value>& info);
+    void (*)(Local<String> property, const PropertyCallbackInfo<Value>& info);
 using AccessorNameGetterCallback =
-void (*)(Local<Name> property, const PropertyCallbackInfo<Value>& info);
+    void (*)(Local<Name> property, const PropertyCallbackInfo<Value>& info);
 
 using AccessorSetterCallback = void (*)(Local<String> property,
                                         Local<Value> value,
                                         const PropertyCallbackInfo<void>& info);
 using AccessorNameSetterCallback =
-void (*)(Local<Name> property, Local<Value> value,
-         const PropertyCallbackInfo<void>& info);
+    void (*)(Local<Name> property, Local<Value> value,
+             const PropertyCallbackInfo<void>& info);
 
 /**
  * Access control specifications.
@@ -3935,7 +3930,7 @@ enum class IntegrityLevel { kFrozen, kSealed };
  * A JavaScript object (ECMA-262, 4.3.3)
  */
 class V8_EXPORT Object : public Value {
-public:
+ public:
   /**
    * Set only return Just(true) or Empty(), so if it should never fail, use
    * result.Check().
@@ -4395,7 +4390,7 @@ public:
    */
   bool IsCodeLike(Isolate* isolate) const;
 
-private:
+ private:
   Object();
   static void CheckCast(Value* obj);
   Local<Value> SlowGetInternalField(int index);
@@ -4407,7 +4402,7 @@ private:
  * An instance of the built-in array constructor (ECMA-262, 15.4.2).
  */
 class V8_EXPORT Array : public Object {
-public:
+ public:
   uint32_t Length() const;
 
   /**
@@ -4423,7 +4418,7 @@ public:
   static Local<Array> New(Isolate* isolate, Local<Value>* elements,
                           size_t length);
   V8_INLINE static Array* Cast(Value* obj);
-private:
+ private:
   Array();
   static void CheckCast(Value* obj);
 };
@@ -4433,7 +4428,7 @@ private:
  * An instance of the built-in Map constructor (ECMA-262, 6th Edition, 23.1.1).
  */
 class V8_EXPORT Map : public Object {
-public:
+ public:
   size_t Size() const;
   void Clear();
   V8_WARN_UNUSED_RESULT MaybeLocal<Value> Get(Local<Context> context,
@@ -4459,7 +4454,7 @@ public:
 
   V8_INLINE static Map* Cast(Value* obj);
 
-private:
+ private:
   Map();
   static void CheckCast(Value* obj);
 };
@@ -4469,7 +4464,7 @@ private:
  * An instance of the built-in Set constructor (ECMA-262, 6th Edition, 23.2.1).
  */
 class V8_EXPORT Set : public Object {
-public:
+ public:
   size_t Size() const;
   void Clear();
   V8_WARN_UNUSED_RESULT MaybeLocal<Set> Add(Local<Context> context,
@@ -4491,7 +4486,7 @@ public:
 
   V8_INLINE static Set* Cast(Value* obj);
 
-private:
+ private:
   Set();
   static void CheckCast(Value* obj);
 };
@@ -4499,7 +4494,7 @@ private:
 
 template<typename T>
 class ReturnValue {
-public:
+ public:
   template <class S> V8_INLINE ReturnValue(const ReturnValue<S>& that)
       : value_(that.value_) {
     static_assert(std::is_base_of<T, S>::value, "type check");
@@ -4532,7 +4527,7 @@ public:
   // value.
   V8_INLINE Local<Value> Get() const;
 
-private:
+ private:
   template<class F> friend class ReturnValue;
   template<class F> friend class FunctionCallbackInfo;
   template<class F> friend class PropertyCallbackInfo;
@@ -4553,7 +4548,7 @@ private:
  */
 template<typename T>
 class FunctionCallbackInfo {
-public:
+ public:
   /** The number of available arguments. */
   V8_INLINE int Length() const;
   /**
@@ -4574,10 +4569,7 @@ public:
    * referred to as holder [sic]).
    */
   V8_INLINE Local<Object> Holder() const;
-  /** For construct calls, this returns the "new.target" value
-  * new.target属性允许你检测函数或构造方法是否是通过new运算符被调用的。在通过new运算符被初始化的函数或构造方法中
-  * new.target返回一个指向构造方法或函数的引用。在普通的函数调用中，new.target 的值是undefined。
-  */
+  /** For construct calls, this returns the "new.target" value. */
   V8_INLINE Local<Value> NewTarget() const;
   /** Indicates whether this is a regular call or a construct call. */
   V8_INLINE bool IsConstructCall() const;
@@ -4590,7 +4582,7 @@ public:
   // This shouldn't be public, but the arm compiler needs it.
   static const int kArgsLength = 6;
 
-protected:
+ protected:
   friend class internal::FunctionCallbackArguments;
   friend class internal::CustomArguments<FunctionCallbackInfo>;
   friend class debug::ConsoleCallArguments;
@@ -4615,7 +4607,7 @@ protected:
  */
 template<typename T>
 class PropertyCallbackInfo {
-public:
+ public:
   /**
    * \return The isolate of the property access.
    */
@@ -4704,7 +4696,7 @@ public:
   // This shouldn't be public, but the arm compiler needs it.
   static const int kArgsLength = 7;
 
-protected:
+ protected:
   friend class MacroAssembler;
   friend class internal::PropertyCallbackArguments;
   friend class internal::CustomArguments<PropertyCallbackInfo>;
@@ -4728,7 +4720,7 @@ enum class ConstructorBehavior { kThrow, kAllow };
  * A JavaScript function object (ECMA-262, 15.3).
  */
 class V8_EXPORT Function : public Object {
-public:
+ public:
   /**
    * Create a function in the current execution context
    * for a given FunctionCallback.
@@ -4823,7 +4815,7 @@ public:
   V8_INLINE static Function* Cast(Value* obj);
   static const int kLineOffsetNotFound;
 
-private:
+ private:
   Function();
   static void CheckCast(Value* obj);
 };
@@ -4837,7 +4829,7 @@ private:
  * An instance of the built-in Promise constructor (ES6 draft).
  */
 class V8_EXPORT Promise : public Object {
-public:
+ public:
   /**
    * State of the promise. Each value corresponds to one of the possible values
    * of the [[PromiseState]] field.
@@ -4845,7 +4837,7 @@ public:
   enum PromiseState { kPending, kFulfilled, kRejected };
 
   class V8_EXPORT Resolver : public Object {
-  public:
+   public:
     /**
      * Create a new resolver, along with an associated promise in pending state.
      */
@@ -4869,7 +4861,7 @@ public:
 
     V8_INLINE static Resolver* Cast(Value* obj);
 
-  private:
+   private:
     Resolver();
     static void CheckCast(Value* obj);
   };
@@ -4916,7 +4908,7 @@ public:
 
   static const int kEmbedderFieldCount = V8_PROMISE_INTERNAL_FIELD_COUNT;
 
-private:
+ private:
   Promise();
   static void CheckCast(Value* obj);
 };
@@ -4950,7 +4942,7 @@ private:
  * \endcode
  */
 class V8_EXPORT PropertyDescriptor {
-public:
+ public:
   // GenericDescriptor
   PropertyDescriptor();
 
@@ -4990,7 +4982,7 @@ public:
   PropertyDescriptor(const PropertyDescriptor&) = delete;
   void operator=(const PropertyDescriptor&) = delete;
 
-private:
+ private:
   PrivateData* private_;
 };
 
@@ -4999,7 +4991,7 @@ private:
  * 26.2.1).
  */
 class V8_EXPORT Proxy : public Object {
-public:
+ public:
   Local<Value> GetTarget();
   Local<Value> GetHandler();
   bool IsRevoked() const;
@@ -5014,7 +5006,7 @@ public:
 
   V8_INLINE static Proxy* Cast(Value* obj);
 
-private:
+ private:
   Proxy();
   static void CheckCast(Value* obj);
 };
@@ -5031,7 +5023,7 @@ private:
  */
 template <typename T>
 class V8_EXPORT MemorySpan {
-public:
+ public:
   /** The default constructor creates an empty span. */
   constexpr MemorySpan() = default;
 
@@ -5042,7 +5034,7 @@ public:
   /** Returns the number of elements that the buffer holds. */
   constexpr size_t size() const { return size_; }
 
-private:
+ private:
   T* data_ = nullptr;
   size_t size_ = 0;
 };
@@ -5061,7 +5053,7 @@ struct OwnedBuffer {
 // Wrapper around a compiled WebAssembly module, which is potentially shared by
 // different WasmModuleObjects.
 class V8_EXPORT CompiledWasmModule {
-public:
+ public:
   /**
    * Serialize the compiled module. The serialized data does not include the
    * wire bytes.
@@ -5075,7 +5067,7 @@ public:
 
   const std::string& source_url() const { return source_url_; }
 
-private:
+ private:
   friend class WasmModuleObject;
   friend class WasmStreaming;
 
@@ -5088,7 +5080,7 @@ private:
 
 // An instance of WebAssembly.Memory.
 class V8_EXPORT WasmMemoryObject : public Object {
-public:
+ public:
   WasmMemoryObject() = delete;
 
   /**
@@ -5098,13 +5090,13 @@ public:
 
   V8_INLINE static WasmMemoryObject* Cast(Value* obj);
 
-private:
+ private:
   static void CheckCast(Value* object);
 };
 
 // An instance of WebAssembly.Module.
 class V8_EXPORT WasmModuleObject : public Object {
-public:
+ public:
   WasmModuleObject() = delete;
 
   /**
@@ -5122,7 +5114,7 @@ public:
 
   V8_INLINE static WasmModuleObject* Cast(Value* obj);
 
-private:
+ private:
   static void CheckCast(Value* obj);
 };
 
@@ -5133,14 +5125,14 @@ private:
  * V8.
  */
 class V8_EXPORT WasmStreaming final {
-public:
+ public:
   class WasmStreamingImpl;
 
   /**
    * Client to receive streaming event notifications.
    */
   class Client {
-  public:
+   public:
     virtual ~Client() = default;
     /**
      * Passes the fully compiled module to the client. This can be used to
@@ -5202,14 +5194,14 @@ public:
   static std::shared_ptr<WasmStreaming> Unpack(Isolate* isolate,
                                                Local<Value> value);
 
-private:
+ private:
   std::unique_ptr<WasmStreamingImpl> impl_;
 };
 
 // TODO(mtrofin): when streaming compilation is done, we can rename this
 // to simply WasmModuleObjectBuilder
 class V8_EXPORT WasmModuleObjectBuilderStreaming final {
-public:
+ public:
   explicit WasmModuleObjectBuilderStreaming(Isolate* isolate);
   /**
    * The buffer passed into OnBytesReceived is owned by the caller.
@@ -5226,11 +5218,11 @@ public:
 
   ~WasmModuleObjectBuilderStreaming() = default;
 
-private:
+ private:
   WasmModuleObjectBuilderStreaming(const WasmModuleObjectBuilderStreaming&) =
-  delete;
+      delete;
   WasmModuleObjectBuilderStreaming(WasmModuleObjectBuilderStreaming&&) =
-  default;
+      default;
   WasmModuleObjectBuilderStreaming& operator=(
       const WasmModuleObjectBuilderStreaming&) = delete;
   WasmModuleObjectBuilderStreaming& operator=(
@@ -5274,7 +5266,7 @@ enum class ArrayBufferCreationMode { kInternalized, kExternalized };
  * creating the Isolate to make it hold a reference to the allocator itself.
  */
 class V8_EXPORT BackingStore : public v8::internal::BackingStoreBase {
-public:
+ public:
   ~BackingStore();
 
   /**
@@ -5330,7 +5322,7 @@ public:
    */
   static void EmptyDeleter(void* data, size_t length, void* deleter_data);
 
-private:
+ private:
   /**
    * See [Shared]ArrayBuffer::GetBackingStore and
    * [Shared]ArrayBuffer::NewBackingStore.
@@ -5349,7 +5341,7 @@ using BackingStoreDeleterCallback = void (*)(void* data, size_t length,
  * An instance of the built-in ArrayBuffer constructor (ES6 draft 15.13.5).
  */
 class V8_EXPORT ArrayBuffer : public Object {
-public:
+ public:
   /**
    * A thread-safe allocator that V8 uses to allocate |ArrayBuffer|'s memory.
    * The allocator is a global V8 setting. It has to be set via
@@ -5366,7 +5358,7 @@ public:
    * functions.
    */
   class V8_EXPORT Allocator { // NOLINT
-  public:
+   public:
     virtual ~Allocator() = default;
 
     /**
@@ -5494,7 +5486,7 @@ public:
   static const int kInternalFieldCount = V8_ARRAY_BUFFER_INTERNAL_FIELD_COUNT;
   static const int kEmbedderFieldCount = V8_ARRAY_BUFFER_INTERNAL_FIELD_COUNT;
 
-private:
+ private:
   ArrayBuffer();
   static void CheckCast(Value* obj);
 };
@@ -5511,7 +5503,7 @@ private:
  * including TypedArrays and DataView (ES6 draft 15.13).
  */
 class V8_EXPORT ArrayBufferView : public Object {
-public:
+ public:
   /**
    * Returns underlying ArrayBuffer.
    */
@@ -5549,7 +5541,7 @@ public:
   static const int kEmbedderFieldCount =
       V8_ARRAY_BUFFER_VIEW_INTERNAL_FIELD_COUNT;
 
-private:
+ private:
   ArrayBufferView();
   static void CheckCast(Value* obj);
 };
@@ -5560,14 +5552,14 @@ private:
  * (ES6 draft 15.13.6).
  */
 class V8_EXPORT TypedArray : public ArrayBufferView {
-public:
+ public:
   /*
    * The largest typed array size that can be constructed using New.
    */
   static constexpr size_t kMaxLength =
       internal::kApiSystemPointerSize == 4
-      ? internal::kSmiMaxValue
-      : static_cast<size_t>(uint64_t{1} << 32);
+          ? internal::kSmiMaxValue
+          : static_cast<size_t>(uint64_t{1} << 32);
 
   /**
    * Number of elements in this typed array
@@ -5577,7 +5569,7 @@ public:
 
   V8_INLINE static TypedArray* Cast(Value* obj);
 
-private:
+ private:
   TypedArray();
   static void CheckCast(Value* obj);
 };
@@ -5587,14 +5579,14 @@ private:
  * An instance of Uint8Array constructor (ES6 draft 15.13.6).
  */
 class V8_EXPORT Uint8Array : public TypedArray {
-public:
+ public:
   static Local<Uint8Array> New(Local<ArrayBuffer> array_buffer,
                                size_t byte_offset, size_t length);
   static Local<Uint8Array> New(Local<SharedArrayBuffer> shared_array_buffer,
                                size_t byte_offset, size_t length);
   V8_INLINE static Uint8Array* Cast(Value* obj);
 
-private:
+ private:
   Uint8Array();
   static void CheckCast(Value* obj);
 };
@@ -5604,7 +5596,7 @@ private:
  * An instance of Uint8ClampedArray constructor (ES6 draft 15.13.6).
  */
 class V8_EXPORT Uint8ClampedArray : public TypedArray {
-public:
+ public:
   static Local<Uint8ClampedArray> New(Local<ArrayBuffer> array_buffer,
                                       size_t byte_offset, size_t length);
   static Local<Uint8ClampedArray> New(
@@ -5612,7 +5604,7 @@ public:
       size_t length);
   V8_INLINE static Uint8ClampedArray* Cast(Value* obj);
 
-private:
+ private:
   Uint8ClampedArray();
   static void CheckCast(Value* obj);
 };
@@ -5621,14 +5613,14 @@ private:
  * An instance of Int8Array constructor (ES6 draft 15.13.6).
  */
 class V8_EXPORT Int8Array : public TypedArray {
-public:
+ public:
   static Local<Int8Array> New(Local<ArrayBuffer> array_buffer,
                               size_t byte_offset, size_t length);
   static Local<Int8Array> New(Local<SharedArrayBuffer> shared_array_buffer,
                               size_t byte_offset, size_t length);
   V8_INLINE static Int8Array* Cast(Value* obj);
 
-private:
+ private:
   Int8Array();
   static void CheckCast(Value* obj);
 };
@@ -5638,14 +5630,14 @@ private:
  * An instance of Uint16Array constructor (ES6 draft 15.13.6).
  */
 class V8_EXPORT Uint16Array : public TypedArray {
-public:
+ public:
   static Local<Uint16Array> New(Local<ArrayBuffer> array_buffer,
                                 size_t byte_offset, size_t length);
   static Local<Uint16Array> New(Local<SharedArrayBuffer> shared_array_buffer,
                                 size_t byte_offset, size_t length);
   V8_INLINE static Uint16Array* Cast(Value* obj);
 
-private:
+ private:
   Uint16Array();
   static void CheckCast(Value* obj);
 };
@@ -5655,14 +5647,14 @@ private:
  * An instance of Int16Array constructor (ES6 draft 15.13.6).
  */
 class V8_EXPORT Int16Array : public TypedArray {
-public:
+ public:
   static Local<Int16Array> New(Local<ArrayBuffer> array_buffer,
                                size_t byte_offset, size_t length);
   static Local<Int16Array> New(Local<SharedArrayBuffer> shared_array_buffer,
                                size_t byte_offset, size_t length);
   V8_INLINE static Int16Array* Cast(Value* obj);
 
-private:
+ private:
   Int16Array();
   static void CheckCast(Value* obj);
 };
@@ -5672,14 +5664,14 @@ private:
  * An instance of Uint32Array constructor (ES6 draft 15.13.6).
  */
 class V8_EXPORT Uint32Array : public TypedArray {
-public:
+ public:
   static Local<Uint32Array> New(Local<ArrayBuffer> array_buffer,
                                 size_t byte_offset, size_t length);
   static Local<Uint32Array> New(Local<SharedArrayBuffer> shared_array_buffer,
                                 size_t byte_offset, size_t length);
   V8_INLINE static Uint32Array* Cast(Value* obj);
 
-private:
+ private:
   Uint32Array();
   static void CheckCast(Value* obj);
 };
@@ -5689,14 +5681,14 @@ private:
  * An instance of Int32Array constructor (ES6 draft 15.13.6).
  */
 class V8_EXPORT Int32Array : public TypedArray {
-public:
+ public:
   static Local<Int32Array> New(Local<ArrayBuffer> array_buffer,
                                size_t byte_offset, size_t length);
   static Local<Int32Array> New(Local<SharedArrayBuffer> shared_array_buffer,
                                size_t byte_offset, size_t length);
   V8_INLINE static Int32Array* Cast(Value* obj);
 
-private:
+ private:
   Int32Array();
   static void CheckCast(Value* obj);
 };
@@ -5706,14 +5698,14 @@ private:
  * An instance of Float32Array constructor (ES6 draft 15.13.6).
  */
 class V8_EXPORT Float32Array : public TypedArray {
-public:
+ public:
   static Local<Float32Array> New(Local<ArrayBuffer> array_buffer,
                                  size_t byte_offset, size_t length);
   static Local<Float32Array> New(Local<SharedArrayBuffer> shared_array_buffer,
                                  size_t byte_offset, size_t length);
   V8_INLINE static Float32Array* Cast(Value* obj);
 
-private:
+ private:
   Float32Array();
   static void CheckCast(Value* obj);
 };
@@ -5723,14 +5715,14 @@ private:
  * An instance of Float64Array constructor (ES6 draft 15.13.6).
  */
 class V8_EXPORT Float64Array : public TypedArray {
-public:
+ public:
   static Local<Float64Array> New(Local<ArrayBuffer> array_buffer,
                                  size_t byte_offset, size_t length);
   static Local<Float64Array> New(Local<SharedArrayBuffer> shared_array_buffer,
                                  size_t byte_offset, size_t length);
   V8_INLINE static Float64Array* Cast(Value* obj);
 
-private:
+ private:
   Float64Array();
   static void CheckCast(Value* obj);
 };
@@ -5739,14 +5731,14 @@ private:
  * An instance of BigInt64Array constructor.
  */
 class V8_EXPORT BigInt64Array : public TypedArray {
-public:
+ public:
   static Local<BigInt64Array> New(Local<ArrayBuffer> array_buffer,
                                   size_t byte_offset, size_t length);
   static Local<BigInt64Array> New(Local<SharedArrayBuffer> shared_array_buffer,
                                   size_t byte_offset, size_t length);
   V8_INLINE static BigInt64Array* Cast(Value* obj);
 
-private:
+ private:
   BigInt64Array();
   static void CheckCast(Value* obj);
 };
@@ -5755,14 +5747,14 @@ private:
  * An instance of BigUint64Array constructor.
  */
 class V8_EXPORT BigUint64Array : public TypedArray {
-public:
+ public:
   static Local<BigUint64Array> New(Local<ArrayBuffer> array_buffer,
                                    size_t byte_offset, size_t length);
   static Local<BigUint64Array> New(Local<SharedArrayBuffer> shared_array_buffer,
                                    size_t byte_offset, size_t length);
   V8_INLINE static BigUint64Array* Cast(Value* obj);
 
-private:
+ private:
   BigUint64Array();
   static void CheckCast(Value* obj);
 };
@@ -5771,14 +5763,14 @@ private:
  * An instance of DataView constructor (ES6 draft 15.13.7).
  */
 class V8_EXPORT DataView : public ArrayBufferView {
-public:
+ public:
   static Local<DataView> New(Local<ArrayBuffer> array_buffer,
                              size_t byte_offset, size_t length);
   static Local<DataView> New(Local<SharedArrayBuffer> shared_array_buffer,
                              size_t byte_offset, size_t length);
   V8_INLINE static DataView* Cast(Value* obj);
 
-private:
+ private:
   DataView();
   static void CheckCast(Value* obj);
 };
@@ -5788,7 +5780,7 @@ private:
  * An instance of the built-in SharedArrayBuffer constructor.
  */
 class V8_EXPORT SharedArrayBuffer : public Object {
-public:
+ public:
   /**
    * Data length in bytes.
    */
@@ -5852,7 +5844,7 @@ public:
 
   static const int kInternalFieldCount = V8_ARRAY_BUFFER_INTERNAL_FIELD_COUNT;
 
-private:
+ private:
   SharedArrayBuffer();
   static void CheckCast(Value* obj);
 };
@@ -5862,7 +5854,7 @@ private:
  * An instance of the built-in Date constructor (ECMA-262, 15.9).
  */
 class V8_EXPORT Date : public Object {
-public:
+ public:
   static V8_WARN_UNUSED_RESULT MaybeLocal<Value> New(Local<Context> context,
                                                      double time);
 
@@ -5874,7 +5866,7 @@ public:
 
   V8_INLINE static Date* Cast(Value* obj);
 
-private:
+ private:
   static void CheckCast(Value* obj);
 };
 
@@ -5883,14 +5875,14 @@ private:
  * A Number object (ECMA-262, 4.3.21).
  */
 class V8_EXPORT NumberObject : public Object {
-public:
+ public:
   static Local<Value> New(Isolate* isolate, double value);
 
   double ValueOf() const;
 
   V8_INLINE static NumberObject* Cast(Value* obj);
 
-private:
+ private:
   static void CheckCast(Value* obj);
 };
 
@@ -5898,14 +5890,14 @@ private:
  * A BigInt object (https://tc39.github.io/proposal-bigint)
  */
 class V8_EXPORT BigIntObject : public Object {
-public:
+ public:
   static Local<Value> New(Isolate* isolate, int64_t value);
 
   Local<BigInt> ValueOf() const;
 
   V8_INLINE static BigIntObject* Cast(Value* obj);
 
-private:
+ private:
   static void CheckCast(Value* obj);
 };
 
@@ -5913,14 +5905,14 @@ private:
  * A Boolean object (ECMA-262, 4.3.15).
  */
 class V8_EXPORT BooleanObject : public Object {
-public:
+ public:
   static Local<Value> New(Isolate* isolate, bool value);
 
   bool ValueOf() const;
 
   V8_INLINE static BooleanObject* Cast(Value* obj);
 
-private:
+ private:
   static void CheckCast(Value* obj);
 };
 
@@ -5929,14 +5921,14 @@ private:
  * A String object (ECMA-262, 4.3.18).
  */
 class V8_EXPORT StringObject : public Object {
-public:
+ public:
   static Local<Value> New(Isolate* isolate, Local<String> value);
 
   Local<String> ValueOf() const;
 
   V8_INLINE static StringObject* Cast(Value* obj);
 
-private:
+ private:
   static void CheckCast(Value* obj);
 };
 
@@ -5945,14 +5937,14 @@ private:
  * A Symbol object (ECMA-262 edition 6).
  */
 class V8_EXPORT SymbolObject : public Object {
-public:
+ public:
   static Local<Value> New(Isolate* isolate, Local<Symbol> value);
 
   Local<Symbol> ValueOf() const;
 
   V8_INLINE static SymbolObject* Cast(Value* obj);
 
-private:
+ private:
   static void CheckCast(Value* obj);
 };
 
@@ -5961,7 +5953,7 @@ private:
  * An instance of the built-in RegExp constructor (ECMA-262, 15.10).
  */
 class V8_EXPORT RegExp : public Object {
-public:
+ public:
   /**
    * Regular expression flag bits. They can be or'ed to enable a set
    * of flags.
@@ -6034,7 +6026,7 @@ public:
 
   V8_INLINE static RegExp* Cast(Value* obj);
 
-private:
+ private:
   static void CheckCast(Value* obj);
 };
 
@@ -6043,11 +6035,11 @@ private:
  * to associate C++ data structures with JavaScript objects.
  */
 class V8_EXPORT External : public Value {
-public:
+ public:
   static Local<External> New(Isolate* isolate, void* value);
   V8_INLINE static External* Cast(Value* obj);
   void* Value() const;
-private:
+ private:
   static void CheckCast(v8::Value* obj);
 };
 
@@ -6075,7 +6067,7 @@ enum Intrinsic {
  * The superclass of object and function templates.
  */
 class V8_EXPORT Template : public Data {
-public:
+ public:
   /**
    * Adds a property to each instance created by this template.
    *
@@ -6088,11 +6080,11 @@ public:
   V8_INLINE void Set(Isolate* isolate, const char* name, Local<Data> value);
 
   void SetAccessorProperty(
-      Local<Name> name,
-      Local<FunctionTemplate> getter = Local<FunctionTemplate>(),
-      Local<FunctionTemplate> setter = Local<FunctionTemplate>(),
-      PropertyAttribute attribute = None,
-      AccessControl settings = DEFAULT);
+     Local<Name> name,
+     Local<FunctionTemplate> getter = Local<FunctionTemplate>(),
+     Local<FunctionTemplate> setter = Local<FunctionTemplate>(),
+     PropertyAttribute attribute = None,
+     AccessControl settings = DEFAULT);
 
   /**
    * Whenever the property with the given name is accessed on objects
@@ -6155,7 +6147,7 @@ public:
   void SetIntrinsicDataProperty(Local<Name> name, Intrinsic intrinsic,
                                 PropertyAttribute attribute = None);
 
-private:
+ private:
   Template();
 
   friend class ObjectTemplate;
@@ -6202,7 +6194,7 @@ private:
  * See also `ObjectTemplate::SetHandler`.
  */
 using GenericNamedPropertyGetterCallback =
-void (*)(Local<Name> property, const PropertyCallbackInfo<Value>& info);
+    void (*)(Local<Name> property, const PropertyCallbackInfo<Value>& info);
 
 /**
  * Interceptor for set requests on an object.
@@ -6226,8 +6218,8 @@ void (*)(Local<Name> property, const PropertyCallbackInfo<Value>& info);
  * `ObjectTemplate::SetHandler.`
  */
 using GenericNamedPropertySetterCallback =
-void (*)(Local<Name> property, Local<Value> value,
-         const PropertyCallbackInfo<Value>& info);
+    void (*)(Local<Name> property, Local<Value> value,
+             const PropertyCallbackInfo<Value>& info);
 
 /**
  * Intercepts all requests that query the attributes of the
@@ -6251,7 +6243,7 @@ void (*)(Local<Name> property, Local<Value> value,
  * `ObjectTemplate::SetHandler.`
  */
 using GenericNamedPropertyQueryCallback =
-void (*)(Local<Name> property, const PropertyCallbackInfo<Integer>& info);
+    void (*)(Local<Name> property, const PropertyCallbackInfo<Integer>& info);
 
 /**
  * Interceptor for delete requests on an object.
@@ -6275,7 +6267,7 @@ void (*)(Local<Name> property, const PropertyCallbackInfo<Integer>& info);
  * See also `ObjectTemplate::SetHandler.`
  */
 using GenericNamedPropertyDeleterCallback =
-void (*)(Local<Name> property, const PropertyCallbackInfo<Boolean>& info);
+    void (*)(Local<Name> property, const PropertyCallbackInfo<Boolean>& info);
 
 /**
  * Returns an array containing the names of the properties the named
@@ -6284,7 +6276,7 @@ void (*)(Local<Name> property, const PropertyCallbackInfo<Boolean>& info);
  * Note: The values in the array must be of type v8::Name.
  */
 using GenericNamedPropertyEnumeratorCallback =
-void (*)(const PropertyCallbackInfo<Array>& info);
+    void (*)(const PropertyCallbackInfo<Array>& info);
 
 /**
  * Interceptor for defineProperty requests on an object.
@@ -6307,8 +6299,8 @@ void (*)(const PropertyCallbackInfo<Array>& info);
  * See also `ObjectTemplate::SetHandler`.
  */
 using GenericNamedPropertyDefinerCallback =
-void (*)(Local<Name> property, const PropertyDescriptor& desc,
-         const PropertyCallbackInfo<Value>& info);
+    void (*)(Local<Name> property, const PropertyDescriptor& desc,
+             const PropertyCallbackInfo<Value>& info);
 
 /**
  * Interceptor for getOwnPropertyDescriptor requests on an object.
@@ -6330,32 +6322,32 @@ void (*)(Local<Name> property, const PropertyDescriptor& desc,
  * See also `ObjectTemplate::SetHandler`.
  */
 using GenericNamedPropertyDescriptorCallback =
-void (*)(Local<Name> property, const PropertyCallbackInfo<Value>& info);
+    void (*)(Local<Name> property, const PropertyCallbackInfo<Value>& info);
 
 /**
  * See `v8::GenericNamedPropertyGetterCallback`.
  */
 using IndexedPropertyGetterCallback =
-void (*)(uint32_t index, const PropertyCallbackInfo<Value>& info);
+    void (*)(uint32_t index, const PropertyCallbackInfo<Value>& info);
 
 /**
  * See `v8::GenericNamedPropertySetterCallback`.
  */
 using IndexedPropertySetterCallback =
-void (*)(uint32_t index, Local<Value> value,
-         const PropertyCallbackInfo<Value>& info);
+    void (*)(uint32_t index, Local<Value> value,
+             const PropertyCallbackInfo<Value>& info);
 
 /**
  * See `v8::GenericNamedPropertyQueryCallback`.
  */
 using IndexedPropertyQueryCallback =
-void (*)(uint32_t index, const PropertyCallbackInfo<Integer>& info);
+    void (*)(uint32_t index, const PropertyCallbackInfo<Integer>& info);
 
 /**
  * See `v8::GenericNamedPropertyDeleterCallback`.
  */
 using IndexedPropertyDeleterCallback =
-void (*)(uint32_t index, const PropertyCallbackInfo<Boolean>& info);
+    void (*)(uint32_t index, const PropertyCallbackInfo<Boolean>& info);
 
 /**
  * Returns an array containing the indices of the properties the indexed
@@ -6364,20 +6356,20 @@ void (*)(uint32_t index, const PropertyCallbackInfo<Boolean>& info);
  * Note: The values in the array must be uint32_t.
  */
 using IndexedPropertyEnumeratorCallback =
-void (*)(const PropertyCallbackInfo<Array>& info);
+    void (*)(const PropertyCallbackInfo<Array>& info);
 
 /**
  * See `v8::GenericNamedPropertyDefinerCallback`.
  */
 using IndexedPropertyDefinerCallback =
-void (*)(uint32_t index, const PropertyDescriptor& desc,
-         const PropertyCallbackInfo<Value>& info);
+    void (*)(uint32_t index, const PropertyDescriptor& desc,
+             const PropertyCallbackInfo<Value>& info);
 
 /**
  * See `v8::GenericNamedPropertyDescriptorCallback`.
  */
 using IndexedPropertyDescriptorCallback =
-void (*)(uint32_t index, const PropertyCallbackInfo<Value>& info);
+    void (*)(uint32_t index, const PropertyCallbackInfo<Value>& info);
 
 /**
  * Access type specification.
@@ -6507,7 +6499,7 @@ using AccessCheckCallback = bool (*)(Local<Context> accessing_context,
  * experimental.
  */
 class V8_EXPORT FunctionTemplate : public Template {
-public:
+ public:
   /** Creates a function template.*/
   static Local<FunctionTemplate> New(
       Isolate* isolate, FunctionCallback callback = nullptr,
@@ -6611,7 +6603,7 @@ public:
 
   V8_INLINE static FunctionTemplate* Cast(Data* data);
 
-private:
+ private:
   FunctionTemplate();
 
   static void CheckCast(Data* that);
@@ -6800,7 +6792,7 @@ struct IndexedPropertyHandlerConfiguration {
  * created from the ObjectTemplate.
  */
 class V8_EXPORT ObjectTemplate : public Template {
-public:
+ public:
   /** Creates an ObjectTemplate. */
   static Local<ObjectTemplate> New(
       Isolate* isolate,
@@ -6987,7 +6979,7 @@ public:
 
   V8_INLINE static ObjectTemplate* Cast(Data* data);
 
-private:
+ private:
   ObjectTemplate();
   static Local<ObjectTemplate> New(internal::Isolate* isolate,
                                    Local<FunctionTemplate> constructor);
@@ -7004,14 +6996,14 @@ private:
  * signature's FunctionTemplate.
  */
 class V8_EXPORT Signature : public Data {
-public:
+ public:
   static Local<Signature> New(
       Isolate* isolate,
       Local<FunctionTemplate> receiver = Local<FunctionTemplate>());
 
   V8_INLINE static Signature* Cast(Data* data);
 
-private:
+ private:
   Signature();
 
   static void CheckCast(Data* that);
@@ -7023,14 +7015,14 @@ private:
  * to an accessor callback.
  */
 class V8_EXPORT AccessorSignature : public Data {
-public:
+ public:
   static Local<AccessorSignature> New(
       Isolate* isolate,
       Local<FunctionTemplate> receiver = Local<FunctionTemplate>());
 
   V8_INLINE static AccessorSignature* Cast(Data* data);
 
-private:
+ private:
   AccessorSignature();
 
   static void CheckCast(Data* that);
@@ -7043,7 +7035,7 @@ private:
  * Ignore
  */
 class V8_EXPORT Extension {  // NOLINT
-public:
+ public:
   // Note that the strings passed into this constructor must live as long
   // as the Extension itself.
   Extension(const char* name, const char* source = nullptr, int dep_count = 0,
@@ -7068,7 +7060,7 @@ public:
   Extension(const Extension&) = delete;
   void operator=(const Extension&) = delete;
 
-private:
+ private:
   const char* name_;
   size_t source_length_;  // expected to initialize before source_
   String::ExternalOneByteStringResource* source_;
@@ -7101,7 +7093,7 @@ V8_INLINE Local<Boolean> False(Isolate* isolate);
  * The argument for set_max_semi_space_size_in_kb is in KB.
  */
 class V8_EXPORT ResourceConstraints {
-public:
+ public:
   /**
    * Configures the constraints with reasonable default values based on the
    * provided heap size limit. The heap size includes both the young and
@@ -7188,7 +7180,7 @@ public:
     initial_young_generation_size_ = initial_size;
   }
 
-private:
+ private:
   static constexpr size_t kMB = 1048576u;
   size_t code_range_size_ = 0;
   size_t max_old_generation_size_ = 0;
@@ -7219,7 +7211,7 @@ using LogEventCallback = void (*)(const char* name, int event);
  * constructor with the message.
  */
 class V8_EXPORT Exception {
-public:
+ public:
   static Local<Value> RangeError(Local<String> message);
   static Local<Value> ReferenceError(Local<String> message);
   static Local<Value> SyntaxError(Local<String> message);
@@ -7290,9 +7282,9 @@ using CallCompletedCallback = void (*)(Isolate*);
  */
 using HostImportModuleDynamicallyCallback V8_DEPRECATE_SOON(
     "Use HostImportModuleDynamicallyWithImportAssertionsCallback instead") =
-MaybeLocal<Promise> (*)(Local<Context> context,
-                        Local<ScriptOrModule> referrer,
-                        Local<String> specifier);
+    MaybeLocal<Promise> (*)(Local<Context> context,
+                            Local<ScriptOrModule> referrer,
+                            Local<String> specifier);
 
 /**
  * HostImportModuleDynamicallyWithImportAssertionsCallback is called when we
@@ -7321,10 +7313,10 @@ MaybeLocal<Promise> (*)(Local<Context> context,
  * that exception by returning an empty MaybeLocal.
  */
 using HostImportModuleDynamicallyWithImportAssertionsCallback =
-MaybeLocal<Promise> (*)(Local<Context> context,
-                        Local<ScriptOrModule> referrer,
-                        Local<String> specifier,
-                        Local<FixedArray> import_assertions);
+    MaybeLocal<Promise> (*)(Local<Context> context,
+                            Local<ScriptOrModule> referrer,
+                            Local<String> specifier,
+                            Local<FixedArray> import_assertions);
 
 /**
  * HostInitializeImportMetaObjectCallback is called the first time import.meta
@@ -7381,7 +7373,7 @@ enum PromiseRejectEvent {
 };
 
 class PromiseRejectMessage {
-public:
+ public:
   PromiseRejectMessage(Local<Promise> promise, PromiseRejectEvent event,
                        Local<Value> value)
       : promise_(promise), event_(event), value_(value) {}
@@ -7390,7 +7382,7 @@ public:
   V8_INLINE PromiseRejectEvent GetEvent() const { return event_; }
   V8_INLINE Local<Value> GetValue() const { return value_; }
 
-private:
+ private:
   Local<Promise> promise_;
   PromiseRejectEvent event_;
   Local<Value> value_;
@@ -7428,7 +7420,7 @@ enum class MicrotasksPolicy { kExplicit, kScoped, kAuto };
  * origins that share the same URL scheme and eTLD+1.
  */
 class V8_EXPORT MicrotaskQueue {
-public:
+ public:
   /**
    * Creates an empty MicrotaskQueue instance.
    */
@@ -7490,7 +7482,7 @@ public:
   MicrotaskQueue(const MicrotaskQueue&) = delete;
   MicrotaskQueue& operator=(const MicrotaskQueue&) = delete;
 
-private:
+ private:
   friend class internal::MicrotaskQueue;
   MicrotaskQueue() = default;
 };
@@ -7505,7 +7497,7 @@ private:
  * microtasks.
  */
 class V8_EXPORT V8_NODISCARD MicrotasksScope {
-public:
+ public:
   enum Type { kRunMicrotasks, kDoNotRunMicrotasks };
 
   MicrotasksScope(Isolate* isolate, Type type);
@@ -7531,7 +7523,7 @@ public:
   MicrotasksScope(const MicrotasksScope&) = delete;
   MicrotasksScope& operator=(const MicrotasksScope&) = delete;
 
-private:
+ private:
   internal::Isolate* const isolate_;
   internal::MicrotaskQueue* const microtask_queue_;
   bool run_;
@@ -7564,12 +7556,12 @@ struct ModifyCodeGenerationFromStringsResult {
  * the source to string if necessary. See: ModifyCodeGenerationFromStrings.
  */
 using ModifyCodeGenerationFromStringsCallback =
-ModifyCodeGenerationFromStringsResult (*)(Local<Context> context,
-                                          Local<Value> source);
+    ModifyCodeGenerationFromStringsResult (*)(Local<Context> context,
+                                              Local<Value> source);
 using ModifyCodeGenerationFromStringsCallback2 =
-ModifyCodeGenerationFromStringsResult (*)(Local<Context> context,
-                                          Local<Value> source,
-                                          bool is_code_like);
+    ModifyCodeGenerationFromStringsResult (*)(Local<Context> context,
+                                              Local<Value> source,
+                                              bool is_code_like);
 
 // --- WebAssembly compilation callbacks ---
 using ExtensionCallback = bool (*)(const FunctionCallbackInfo<Value>&);
@@ -7657,7 +7649,7 @@ using NearHeapLimitCallback = size_t (*)(void* data, size_t current_heap_limit,
  * v8::V8::GetSharedMemoryStatistics to get shared memory statistics from V8.
  */
 class V8_EXPORT SharedMemoryStatistics {
-public:
+ public:
   SharedMemoryStatistics();
   size_t read_only_space_size() { return read_only_space_size_; }
   size_t read_only_space_used_size() { return read_only_space_used_size_; }
@@ -7665,7 +7657,7 @@ public:
     return read_only_space_physical_size_;
   }
 
-private:
+ private:
   size_t read_only_space_size_;
   size_t read_only_space_used_size_;
   size_t read_only_space_physical_size_;
@@ -7681,7 +7673,7 @@ private:
  * get heap statistics from V8.
  */
 class V8_EXPORT HeapStatistics {
-public:
+ public:
   HeapStatistics();
   size_t total_heap_size() { return total_heap_size_; }
   size_t total_heap_size_executable() { return total_heap_size_executable_; }
@@ -7703,7 +7695,7 @@ public:
    */
   size_t does_zap_garbage() { return does_zap_garbage_; }
 
-private:
+ private:
   size_t total_heap_size_;
   size_t total_heap_size_executable_;
   size_t total_physical_size_;
@@ -7725,7 +7717,7 @@ private:
 
 
 class V8_EXPORT HeapSpaceStatistics {
-public:
+ public:
   HeapSpaceStatistics();
   const char* space_name() { return space_name_; }
   size_t space_size() { return space_size_; }
@@ -7733,7 +7725,7 @@ public:
   size_t space_available_size() { return space_available_size_; }
   size_t physical_space_size() { return physical_space_size_; }
 
-private:
+ private:
   const char* space_name_;
   size_t space_size_;
   size_t space_used_size_;
@@ -7745,14 +7737,14 @@ private:
 
 
 class V8_EXPORT HeapObjectStatistics {
-public:
+ public:
   HeapObjectStatistics();
   const char* object_type() { return object_type_; }
   const char* object_sub_type() { return object_sub_type_; }
   size_t object_count() { return object_count_; }
   size_t object_size() { return object_size_; }
 
-private:
+ private:
   const char* object_type_;
   const char* object_sub_type_;
   size_t object_count_;
@@ -7762,13 +7754,13 @@ private:
 };
 
 class V8_EXPORT HeapCodeStatistics {
-public:
+ public:
   HeapCodeStatistics();
   size_t code_and_metadata_size() { return code_and_metadata_size_; }
   size_t bytecode_and_metadata_size() { return bytecode_and_metadata_size_; }
   size_t external_script_source_size() { return external_script_source_size_; }
 
-private:
+ private:
   size_t code_and_metadata_size_;
   size_t bytecode_and_metadata_size_;
   size_t external_script_source_size_;
@@ -7916,7 +7908,7 @@ using UnhandledExceptionCallback =
  * Interface for iterating through all external resources in the heap.
  */
 class V8_EXPORT ExternalResourceVisitor {  // NOLINT
-public:
+ public:
   virtual ~ExternalResourceVisitor() = default;
   virtual void VisitExternalString(Local<String> string) {}
 };
@@ -7926,7 +7918,7 @@ public:
  * Interface for iterating through all the persistent handles in the heap.
  */
 class V8_EXPORT PersistentHandleVisitor {  // NOLINT
-public:
+ public:
   virtual ~PersistentHandleVisitor() = default;
   virtual void VisitPersistentHandle(Persistent<Value>* value,
                                      uint16_t class_id) {}
@@ -7950,7 +7942,7 @@ enum class MemoryPressureLevel { kNone, kModerate, kCritical };
  * reachable from any of the given wrappers.
  */
 class V8_EXPORT EmbedderHeapTracer {
-public:
+ public:
   using EmbedderStackState = cppgc::EmbedderStackState;
 
   enum TraceFlags : uint64_t {
@@ -7963,7 +7955,7 @@ public:
    * Interface for iterating through TracedGlobal handles.
    */
   class V8_EXPORT TracedGlobalHandleVisitor {
-  public:
+   public:
     virtual ~TracedGlobalHandleVisitor() = default;
     virtual void VisitTracedGlobalHandle(const TracedGlobal<Value>& handle) {}
     virtual void VisitTracedReference(const TracedReference<Value>& handle) {}
@@ -8121,7 +8113,7 @@ public:
    */
   v8::Isolate* isolate() const { return isolate_; }
 
-protected:
+ protected:
   v8::Isolate* isolate_ = nullptr;
 
   friend class internal::LocalEmbedderHeapTracer;
@@ -8187,7 +8179,7 @@ enum class MeasureMemoryExecution { kDefault, kEager, kLazy };
  * the measurement is completed to report the results.
  */
 class V8_EXPORT MeasureMemoryDelegate {
-public:
+ public:
   virtual ~MeasureMemoryDelegate() = default;
 
   /**
@@ -8207,7 +8199,7 @@ public:
    */
   virtual void MeasurementComplete(
       const std::vector<std::pair<Local<Context>, size_t>>&
-      context_sizes_in_bytes,
+          context_sizes_in_bytes,
       size_t unattributed_size_in_bytes) = 0;
 
   /**
@@ -8234,7 +8226,7 @@ public:
  * synchronize.
  */
 class V8_EXPORT Isolate {
-public:
+ public:
   /**
    * Initial configuration parameters for a new Isolate.
    */
@@ -8323,7 +8315,7 @@ public:
    * executed within a local scope.
    */
   class V8_EXPORT V8_NODISCARD Scope {
-  public:
+   public:
     explicit Scope(Isolate* isolate) : isolate_(isolate) {
       isolate->Enter();
     }
@@ -8334,7 +8326,7 @@ public:
     Scope(const Scope&) = delete;
     Scope& operator=(const Scope&) = delete;
 
-  private:
+   private:
     Isolate* const isolate_;
   };
 
@@ -8342,7 +8334,7 @@ public:
    * Assert that no Javascript code is invoked.
    */
   class V8_EXPORT V8_NODISCARD DisallowJavascriptExecutionScope {
-  public:
+   public:
     enum OnFailure { CRASH_ON_FAILURE, THROW_ON_FAILURE, DUMP_ON_FAILURE };
 
     DisallowJavascriptExecutionScope(Isolate* isolate, OnFailure on_failure);
@@ -8350,11 +8342,11 @@ public:
 
     // Prevent copying of Scope objects.
     DisallowJavascriptExecutionScope(const DisallowJavascriptExecutionScope&) =
-    delete;
+        delete;
     DisallowJavascriptExecutionScope& operator=(
         const DisallowJavascriptExecutionScope&) = delete;
 
-  private:
+   private:
     OnFailure on_failure_;
     Isolate* isolate_;
 
@@ -8367,17 +8359,17 @@ public:
    * Introduce exception to DisallowJavascriptExecutionScope.
    */
   class V8_EXPORT V8_NODISCARD AllowJavascriptExecutionScope {
-  public:
+   public:
     explicit AllowJavascriptExecutionScope(Isolate* isolate);
     ~AllowJavascriptExecutionScope();
 
     // Prevent copying of Scope objects.
     AllowJavascriptExecutionScope(const AllowJavascriptExecutionScope&) =
-    delete;
+        delete;
     AllowJavascriptExecutionScope& operator=(
         const AllowJavascriptExecutionScope&) = delete;
 
-  private:
+   private:
     Isolate* isolate_;
     bool was_execution_allowed_assert_;
     bool was_execution_allowed_throws_;
@@ -8389,18 +8381,18 @@ public:
    * automatically executed otherwise.
    */
   class V8_EXPORT V8_NODISCARD SuppressMicrotaskExecutionScope {
-  public:
+   public:
     explicit SuppressMicrotaskExecutionScope(
         Isolate* isolate, MicrotaskQueue* microtask_queue = nullptr);
     ~SuppressMicrotaskExecutionScope();
 
     // Prevent copying of Scope objects.
     SuppressMicrotaskExecutionScope(const SuppressMicrotaskExecutionScope&) =
-    delete;
+        delete;
     SuppressMicrotaskExecutionScope& operator=(
         const SuppressMicrotaskExecutionScope&) = delete;
 
-  private:
+   private:
     internal::Isolate* const isolate_;
     internal::MicrotaskQueue* const microtask_queue_;
     internal::Address previous_stack_height_;
@@ -8413,7 +8405,7 @@ public:
    * inside any recursive API calls without explicit SafeForTerminationScope.
    */
   class V8_EXPORT V8_NODISCARD SafeForTerminationScope {
-  public:
+   public:
     explicit SafeForTerminationScope(v8::Isolate* isolate);
     ~SafeForTerminationScope();
 
@@ -8421,7 +8413,7 @@ public:
     SafeForTerminationScope(const SafeForTerminationScope&) = delete;
     SafeForTerminationScope& operator=(const SafeForTerminationScope&) = delete;
 
-  private:
+   private:
     internal::Isolate* isolate_;
     bool prev_value_;
   };
@@ -8979,7 +8971,7 @@ public:
    * `Atomics.wait` call.
    */
   class V8_EXPORT AtomicsWaitWakeHandle {
-  public:
+   public:
     /**
      * Stop this `Atomics.wait()` call and call the |AtomicsWaitCallback|
      * with |kAPIStopped|.
@@ -9640,7 +9632,7 @@ public:
   void operator delete(void*, size_t) = delete;
   void operator delete[](void*, size_t) = delete;
 
-private:
+ private:
   template <class K, class V, class Traits>
   friend class PersistentValueMapBase;
 
@@ -9649,7 +9641,7 @@ private:
 };
 
 class V8_EXPORT StartupData {
-public:
+ public:
   /**
    * Whether the data created can be rehashed and and the hash seed can be
    * recomputed when deserialized.
@@ -9686,13 +9678,13 @@ using EntropySource = bool (*)(unsigned char* buffer, size_t length);
  * \note The resolver function must not cause garbage collection.
  */
 using ReturnAddressLocationResolver =
-uintptr_t (*)(uintptr_t return_addr_location);
+    uintptr_t (*)(uintptr_t return_addr_location);
 
 /**
  * Container class for static utility functions.
  */
 class V8_EXPORT V8 {
-public:
+ public:
   /**
    * Hand startup data to V8, in case the embedder has chosen to build
    * V8 with external startup data.
@@ -9877,7 +9869,7 @@ public:
    */
   static void SetIsCrossOriginIsolated();
 
-private:
+ private:
   V8();
 
   enum BuildConfigurationFeatures {
@@ -9954,15 +9946,9 @@ private:
  * and exited by the constructor and destructor, respectively; The destructor
  * will also destroy the Isolate. Experimental language features, including
  * those available by default, are not available while creating a snapshot.
- * * Helper类创建快照数据Blob。
-  *
-  * SnapshotCreator所使用的隔离由它拥有，并将被输入
-  *并分别由构造函数和析构函数退出； 破坏者
-  *也将破坏隔离。 实验语言功能，包括
-  *默认情况下可用，在创建快照时不可用。
  */
 class V8_EXPORT SnapshotCreator {
-public:
+ public:
   enum class FunctionCodeHandling { kClear, kKeep };
 
   /**
@@ -10008,7 +9994,7 @@ public:
    */
   void SetDefaultContext(Local<Context> context,
                          SerializeInternalFieldsCallback callback =
-                         SerializeInternalFieldsCallback());
+                             SerializeInternalFieldsCallback());
 
   /**
    * Add additional context to be included in the snapshot blob.
@@ -10020,7 +10006,7 @@ public:
    */
   size_t AddContext(Local<Context> context,
                     SerializeInternalFieldsCallback callback =
-                    SerializeInternalFieldsCallback());
+                        SerializeInternalFieldsCallback());
 
   /**
    * Attach arbitrary V8::Data to the context snapshot, which can be retrieved
@@ -10054,7 +10040,7 @@ public:
   SnapshotCreator(const SnapshotCreator&) = delete;
   void operator=(const SnapshotCreator&) = delete;
 
-private:
+ private:
   size_t AddData(Local<Context> context, internal::Address object);
   size_t AddData(internal::Address object);
 
@@ -10073,7 +10059,7 @@ private:
  */
 template <class T>
 class Maybe {
-public:
+ public:
   V8_INLINE bool IsNothing() const { return !has_value_; }
   V8_INLINE bool IsJust() const { return has_value_; }
 
@@ -10125,7 +10111,7 @@ public:
     return !operator==(other);
   }
 
-private:
+ private:
   Maybe() : has_value_(false) {}
   explicit Maybe(const T& t) : has_value_(true), value_(t) {}
 
@@ -10151,7 +10137,7 @@ inline Maybe<T> Just(const T& t) {
 // A template specialization of Maybe<T> for the case of T = void.
 template <>
 class Maybe<void> {
-public:
+ public:
   V8_INLINE bool IsNothing() const { return !is_valid_; }
   V8_INLINE bool IsJust() const { return is_valid_; }
 
@@ -10163,7 +10149,7 @@ public:
     return !operator==(other);
   }
 
-private:
+ private:
   struct JustTag {};
 
   Maybe() : is_valid_(false) {}
@@ -10182,7 +10168,7 @@ inline Maybe<void> JustVoid() { return Maybe<void>(Maybe<void>::JustTag()); }
  * An external exception handler.
  */
 class V8_EXPORT TryCatch {
-public:
+ public:
   /**
    * Creates a new try/catch block and registers it with v8.  Note that
    * all TryCatch blocks should be stack allocated because the memory
@@ -10313,7 +10299,7 @@ public:
   TryCatch(const TryCatch&) = delete;
   void operator=(const TryCatch&) = delete;
 
-private:
+ private:
   // Declaring operator new and delete as deleted is not spec compliant.
   // Therefore declare them private instead to disable dynamic alloc
   void* operator new(size_t size);
@@ -10345,7 +10331,7 @@ private:
  * A container for extension names.
  */
 class V8_EXPORT ExtensionConfiguration {
-public:
+ public:
   ExtensionConfiguration() : name_count_(0), names_(nullptr) {}
   ExtensionConfiguration(int name_count, const char* names[])
       : name_count_(name_count), names_(names) { }
@@ -10353,7 +10339,7 @@ public:
   const char** begin() const { return &names_[0]; }
   const char** end()  const { return &names_[name_count_]; }
 
-private:
+ private:
   const int name_count_;
   const char** names_;
 };
@@ -10363,7 +10349,7 @@ private:
  * and functions.
  */
 class V8_EXPORT Context : public Data {
-public:
+ public:
   /**
    * Returns the global proxy object.
    *
@@ -10381,8 +10367,6 @@ public:
   /**
    * Detaches the global object from its context before
    * the global object can be reused to create a new context.
-   * 之前从全局对象中分离全局对象
-   * 可以重新使用全局对象以创建新的上下文。
    */
   void DetachGlobal();
 
@@ -10409,7 +10393,7 @@ public:
       MaybeLocal<ObjectTemplate> global_template = MaybeLocal<ObjectTemplate>(),
       MaybeLocal<Value> global_object = MaybeLocal<Value>(),
       DeserializeInternalFieldsCallback internal_fields_deserializer =
-      DeserializeInternalFieldsCallback(),
+          DeserializeInternalFieldsCallback(),
       MicrotaskQueue* microtask_queue = nullptr);
 
   /**
@@ -10433,7 +10417,7 @@ public:
   static MaybeLocal<Context> FromSnapshot(
       Isolate* isolate, size_t context_snapshot_index,
       DeserializeInternalFieldsCallback embedder_fields_deserializer =
-      DeserializeInternalFieldsCallback(),
+          DeserializeInternalFieldsCallback(),
       ExtensionConfiguration* extensions = nullptr,
       MaybeLocal<Value> global_object = MaybeLocal<Value>(),
       MicrotaskQueue* microtask_queue = nullptr);
@@ -10454,21 +10438,6 @@ public:
    *
    * It is possible, however, to create a new context from the global object
    * returned by this method.
-   * 返回没有实际上下文支持的全局对象。
-  *
-  *全局模板需要具有安装了处理程序的访问权限检查。
-  *如果传入现有的全局对象，则将分离全局对象
-  *从上下文出发。
-  *
-  *请注意，这与所有访问以下内容的独立上下文不同：
-  *全局代理将失败。 而是，访问检查处理程序被调用。
-  *
-  *也无法分离此方法返回的对象。
-  *相反，访问检查处理程序无需返回任何内容即可实现
-  *相同的效果。
-  *
-  *但是，可以从全局对象创建新的上下文
-  *通过此方法返回。
    */
   static MaybeLocal<Object> NewRemoteContext(
       Isolate* isolate, Local<ObjectTemplate> global_template,
@@ -10615,25 +10584,23 @@ public:
    * operations executed within a local scope.
    */
   class V8_NODISCARD Scope {
-  public:
+   public:
     explicit V8_INLINE Scope(Local<Context> context) : context_(context) {
       context_->Enter();
     }
     V8_INLINE ~Scope() { context_->Exit(); }
 
-  private:
+   private:
     Local<Context> context_;
   };
 
   /**
-  * *堆栈分配的类，以支持备份现有设置对象
-    * 堆。
    * Stack-allocated class to support the backup incumbent settings object
    * stack.
    * https://html.spec.whatwg.org/multipage/webappapis.html#backup-incumbent-settings-object-stack
    */
   class V8_EXPORT V8_NODISCARD BackupIncumbentScope final {
-  public:
+   public:
     /**
      * |backup_incumbent_context| is pushed onto the backup incumbent settings
      * object stack.
@@ -10650,7 +10617,7 @@ public:
       return js_stack_comparable_address_;
     }
 
-  private:
+   private:
     friend class internal::Isolate;
 
     Local<Context> backup_incumbent_context_;
@@ -10660,7 +10627,7 @@ public:
 
   V8_INLINE static Context* Cast(Data* data);
 
-private:
+ private:
   friend class Value;
   friend class Script;
   friend class Object;
@@ -10687,19 +10654,7 @@ private:
  * construction and destruction, the current thread is allowed to use the locked
  * isolate. V8 guarantees that an isolate can be locked by at most one thread at
  * any time. In other words, the scope of a v8::Locker is a critical section.
- ** V8中允许有多个线程，但一次只允许一个线程
-  *要使用任何给定的V8隔离，请参阅隔离类中的注释。 这
-  *“使用V8隔离体”的定义包括访问手柄或握住手柄
-  *在特定的V8隔离中从V8句柄获得的对象指针。
-  * V8的用户应确保（可能是通过锁定）此功能
-  *不违反约束。 除了任何其他同步
-  *可能使用的机制，v8 :: Locker和v8 :: Unlocker类必须是
-  *用于向V8发出线程切换信号。
-  *
-  * v8 :: Locker是作用域锁定对象。 当它处于活动状态时，即
-  *构造和销毁，允许当前线程使用锁定
-  *隔离。 V8保证隔离区最多可以被一个线程锁定
-  * 任何时间。 换句话说，v8 :: Locker的范围是关键部分。
+ *
  * Sample usage:
 * \code
  * ...
@@ -10715,9 +10670,6 @@ private:
  * If you wish to stop using V8 in a thread A you can do this either by
  * destroying the v8::Locker object as above or by constructing a v8::Unlocker
  * object:
- * 如果您希望停止在线程A中使用V8，则可以通过以下方式执行此操作
-  *如上或通过构造v8 :: Unlocker销毁v8 :: Locker对象
-  * 目的：
  *
  * \code
  * {
@@ -10725,7 +10677,6 @@ private:
  *   v8::Unlocker unlocker(isolate);
  *   ...
  *   // Code not using V8 goes here while V8 can run in another thread.
- *  // 不使用V8的代码在这里，而V8可以在另一个线程中运行。
  *   ...
  * } // Destructor called here.
  * isolate->Enter();
@@ -10742,17 +10693,7 @@ private:
  *
  * An unlocker will unlock several lockers if it has to and reinstate the
  * correct depth of locking on its destruction, e.g.:
- *Unlocker对象旨在用于V8中长时间运行的回调中，
-  *您要释放V8锁以供其他线程使用的位置。
-  *
-  * v8 :: Locker是递归锁，即您可以在一个锁中多次锁定
-  *给定线程。 如果您有可以被调用的代码，这将很有用
-  *从持有锁的代码或从没有锁的代码开始。 解锁器是
-  *不是递归的，因此您一次不能在堆栈上拥有多个Unlocker，并且
-  *您不能在不在Locker范围内的线程中使用Unlocker。
-  *
-  *如果需要，解锁器将解锁多个储物柜，然后将其恢复
-  *正确的销毁深度，例如：
+ *
  * \code
  * // V8 not locked.
  * {
@@ -10776,14 +10717,14 @@ private:
  * \endcode
  */
 class V8_EXPORT Unlocker {
-public:
+ public:
   /**
    * Initialize Unlocker for a given Isolate.
    */
   V8_INLINE explicit Unlocker(Isolate* isolate) { Initialize(isolate); }
 
   ~Unlocker();
-private:
+ private:
   void Initialize(Isolate* isolate);
 
   internal::Isolate* isolate_;
@@ -10791,7 +10732,7 @@ private:
 
 
 class V8_EXPORT Locker {
-public:
+ public:
   /**
    * Initialize Locker for a given Isolate.
    */
@@ -10814,7 +10755,7 @@ public:
   Locker(const Locker&) = delete;
   void operator=(const Locker&) = delete;
 
-private:
+ private:
   void Initialize(Isolate* isolate);
 
   bool has_lock_;
@@ -10828,7 +10769,7 @@ private:
  * The unwinder API is only supported on the x64, ARM64 and ARM32 architectures.
  */
 class V8_EXPORT Unwinder {
-public:
+ public:
   /**
    * Attempt to unwind the stack to the most recent C++ frame. This function is
    * signal-safe and does not access any V8 state and thus doesn't require an
@@ -11171,9 +11112,9 @@ TracedGlobal<T>& TracedGlobal<T>::operator=(const TracedGlobal<S>& rhs) {
 template <class T>
 TracedGlobal<T>& TracedGlobal<T>::operator=(TracedGlobal&& rhs) {
   if (this != &rhs) {
-    V8::MoveTracedGlobalReference(
-        reinterpret_cast<internal::Address**>(&rhs.val_),
-        reinterpret_cast<internal::Address**>(&this->val_));
+      V8::MoveTracedGlobalReference(
+          reinterpret_cast<internal::Address**>(&rhs.val_),
+          reinterpret_cast<internal::Address**>(&this->val_));
   }
   return *this;
 }
@@ -11415,7 +11356,7 @@ Local<Object> FunctionCallbackInfo<T>::This() const {
 template<typename T>
 Local<Object> FunctionCallbackInfo<T>::Holder() const {
   return Local<Object>(reinterpret_cast<Object*>(
-                           &implicit_args_[kHolderIndex]));
+      &implicit_args_[kHolderIndex]));
 }
 
 template <typename T>
@@ -11460,15 +11401,15 @@ ScriptOrigin::ScriptOrigin(
     Local<Boolean> is_opaque, Local<Boolean> is_wasm, Local<Boolean> is_module,
     Local<PrimitiveArray> host_defined_options)
     : ScriptOrigin(
-    Isolate::GetCurrent(), resource_name,
-    line_offset.IsEmpty() ? 0 : static_cast<int>(line_offset->Value()),
-    column_offset.IsEmpty() ? 0
-                            : static_cast<int>(column_offset->Value()),
-    !is_shared_cross_origin.IsEmpty() && is_shared_cross_origin->IsTrue(),
-    static_cast<int>(script_id.IsEmpty() ? -1 : script_id->Value()),
-    source_map_url, !is_opaque.IsEmpty() && is_opaque->IsTrue(),
-    !is_wasm.IsEmpty() && is_wasm->IsTrue(),
-    !is_module.IsEmpty() && is_module->IsTrue(), host_defined_options) {}
+          Isolate::GetCurrent(), resource_name,
+          line_offset.IsEmpty() ? 0 : static_cast<int>(line_offset->Value()),
+          column_offset.IsEmpty() ? 0
+                                  : static_cast<int>(column_offset->Value()),
+          !is_shared_cross_origin.IsEmpty() && is_shared_cross_origin->IsTrue(),
+          static_cast<int>(script_id.IsEmpty() ? -1 : script_id->Value()),
+          source_map_url, !is_opaque.IsEmpty() && is_opaque->IsTrue(),
+          !is_wasm.IsEmpty() && is_wasm->IsTrue(),
+          !is_module.IsEmpty() && is_module->IsTrue(), host_defined_options) {}
 
 ScriptOrigin::ScriptOrigin(Local<Value> resource_name, int line_offset,
                            int column_offset, bool is_shared_cross_origin,
@@ -11547,7 +11488,7 @@ ScriptCompiler::Source::~Source() {
 
 
 const ScriptCompiler::CachedData* ScriptCompiler::Source::GetCachedData()
-const {
+    const {
   return cached_data;
 }
 
