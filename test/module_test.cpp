@@ -1,7 +1,5 @@
 #include "../environment.h"
 #include <iostream>
-#include <thread>
-#include <string>
 #include "libplatform/libplatform.h"
 
 TEST_F(Environment, module_classic_test) {
@@ -37,9 +35,9 @@ void module (v8::Local<v8::Object> exports) {
                      isolate->ThrowException(v8::String::NewFromUtf8Literal(isolate, "参数错误"));
                      return;
                    }
-                   float first = info[0].As<v8::Number>()->Value();
-                   float second = info[1].As<v8::Number>()->Value();
-                   float result = first + second;
+                   double first = info[0].As<v8::Number>()->Value();
+                   double second = info[1].As<v8::Number>()->Value();
+                   double result = first + second;
                    info.GetReturnValue().Set(v8::Number::New(isolate, result));
                  }).ToLocalChecked()).FromJust();
     // 设置属性result = 1;

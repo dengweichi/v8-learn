@@ -5,23 +5,19 @@
 #ifndef INCLUDE_CPPGC_ALLOCATION_H_
 #define INCLUDE_CPPGC_ALLOCATION_H_
 
-#include <stdint.h>
-
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <new>
+#include <type_traits>
 
 #include "cppgc/custom-space.h"
-#include "cppgc/garbage-collected.h"
 #include "cppgc/internal/api-constants.h"
 #include "cppgc/internal/gc-info.h"
+#include "cppgc/type-traits.h"
+#include "v8config.h"  // NOLINT(build/include_directory)
 
 namespace cppgc {
-
-template <typename T>
-class MakeGarbageCollectedTraitBase;
-
-namespace internal {
-class ObjectAllocator;
-}  // namespace internal
 
 /**
  * AllocationHandle is used to allocate garbage-collected objects.
@@ -103,6 +99,10 @@ class MakeGarbageCollectedTraitBase
    * \returns the memory to construct an object of type T on.
    */
   V8_INLINE static void* Allocate(AllocationHandle& handle, size_t size) {
+    static_assert(
+        std::is_base_of<typename T::ParentMostGarbageCollectedType, T>::value,
+        "U of GarbageCollected<U> must be a base of T. Check "
+        "GarbageCollected<T> base class inheritance.");
     return SpacePolicy<
         typename internal::GCInfoFolding<
             T, typename T::ParentMostGarbageCollectedType>::ResultType,

@@ -8,6 +8,8 @@
 *.njsproj
 *.sln
 *.sw*
+*build
+/v8/**
 /**/ws.config.js
 
 /cmake-build-debug

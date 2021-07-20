@@ -8,11 +8,6 @@ if(NOT(CMAKE_SIZEOF_VOID_P EQUAL 8))
     message(SEND_ERROR "only support 64 bits")
 endif()
 
-# 只支持x86-64位 cpu
-if(NOT(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64"))
-    message(SEND_ERROR "only support x86-64 cpu")
-endif()
-
 add_subdirectory(./googletest)
 include_directories(./googletest/googletest/include)
 include_directories(./googletest/googlemock/include)
@@ -38,13 +33,21 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     #设置宏LINUX
     add_definitions(-DLINUX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -pthread -DV8_COMPRESS_POINTERS")
-    target_link_libraries(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/v8/lib/linux/libv8_monolith.a
+    target_link_libraries(${PROJECT_NAME}
+            ${PROJECT_SOURCE_DIR}/v8/lib/linux/libv8_monolith.a
             ${PROJECT_SOURCE_DIR}/v8/lib/linux/libv8_libplatform.a
             ${PROJECT_SOURCE_DIR}/v8/lib/linux/libv8_libbase.a)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # 设置宏 WIN
     add_definitions(-DWIN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -DV8_COMPRESS_POINTERS")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DV8_COMPRESS_POINTERS")
+    # windows 链接库
+    set(WINDOW_LINK_LIB winmm.lib dbghelp.lib)
+    target_link_libraries(${PROJECT_NAME}
+            ${WINDOW_LINK_LIB}
+            ${PROJECT_SOURCE_DIR}/v8/lib/win/v8_monolith.lib
+            ${PROJECT_SOURCE_DIR}/v8/lib/win/v8_libbase.lib
+            ${PROJECT_SOURCE_DIR}/v8/lib/win/v8_libplatform.lib)
 else()
     message(SEND_ERROR "only support 64 bits linux and windows system")
 endif()

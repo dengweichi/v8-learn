@@ -392,7 +392,6 @@ TEST_F(Environment, context_embedderData) {
 
     v8::Persistent<v8::Context, v8::CopyablePersistentTraits<v8::Context>> persistentContext(isolate, context);
     std::thread thread([](v8::Isolate* isolate, v8::Persistent<v8::Context, v8::CopyablePersistentTraits<v8::Context>> persistentContext, uint32_t index){
-        v8::HandleScope handleScope(isolate);
         v8::Local<v8::Context> context = persistentContext.Get(isolate);
         EXPECT_TRUE(context->GetEmbedderData(index)->IsString());
         EXPECT_TRUE(context->GetEmbedderData(index).As<v8::String>()->StringEquals(v8::String::NewFromUtf8Literal(isolate, "data")));
