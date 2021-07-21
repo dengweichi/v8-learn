@@ -9,7 +9,7 @@
 *.sln
 *.sw*
 *build
-/v8/**
+/v8
 /**/ws.config.js
 
 /cmake-build-debug
