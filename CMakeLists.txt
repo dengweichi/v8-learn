@@ -3,11 +3,11 @@ project(v8_learn)
 
 set(CMAKE_CXX_STANDARD 14)
 
+
 # 如果没有获取到指针变量大小，模式记录为64位系统
-if(NOT(CMAKE_SIZEOF_VOID_P EQUAL 8) OR NOT(CMAKE_SIZEOF_VOID_P EQUAL 4))
+if(NOT(CMAKE_SIZEOF_VOID_P))
     set(CMAKE_SIZEOF_VOID_P 8)
 endif()
-
 
 add_subdirectory(./googletest)
 include_directories(./googletest/googletest/include)
@@ -29,12 +29,6 @@ add_executable(${PROJECT_NAME}
         test/module_test.cpp
         test/node_build_in_module.cpp)
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    add_definitions(-D64_BIT)
-else()
-    add_definitions(-D32_BIT)
-endif()
-
 #只支持 64位的linux和 64位windows系统
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
@@ -45,12 +39,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
     #设置宏LINUX
     add_definitions(-DLINUX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -pthread")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -pthread  -DV8_COMPRESS_POINTERS")
 
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         message(STATUS build linux 64)
 
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DV8_COMPRESS_POINTERS")
         # 64位系统下
         target_link_libraries(${PROJECT_NAME}
                 ${PROJECT_SOURCE_DIR}/v8/lib/linux/x64/release/libv8_monolith.a
@@ -113,5 +106,5 @@ endif()
 
 
 
-target_link_libraries(v8_learn gtest gtest_main)
-target_link_libraries(v8_learn gmock gmock_main)
+target_link_libraries(${PROJECT_NAME} gtest gtest_main)
+target_link_libraries(${PROJECT_NAME} gmock gmock_main)
