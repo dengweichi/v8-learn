@@ -27,6 +27,7 @@ add_executable(${PROJECT_NAME}
         test/primitive_test.cpp
         test/extension_test.cpp
         test/module_test.cpp
+        test/promise_test.cpp
         test/node_build_in_module.cpp)
 
 #只支持 64位的linux和 64位windows系统

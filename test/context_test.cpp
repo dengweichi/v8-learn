@@ -359,6 +359,7 @@ TEST_F(Environment, context_SecurityChecks) {
         EXPECT_TRUE(tryCatch.HasCaught());
     }
 }
+
 TEST_F(Environment, context_embedderData) {
     v8::Isolate *isolate = getIsolate();
     v8::Locker locker(isolate);
@@ -395,6 +396,7 @@ TEST_F(Environment, context_AlignedPointerFromEmbedderData) {
 
     v8::Persistent<v8::Context, v8::CopyablePersistentTraits<v8::Context>> persistentContext(isolate, context);
     std::thread thread([](v8::Isolate *isolate, v8::Persistent<v8::Context, v8::CopyablePersistentTraits<v8::Context>> persistentContext, uint32_t index) {
+
         v8::Local<v8::Context> context = persistentContext.Get(isolate);
         EXPECT_TRUE(*static_cast<std::string *>(context->GetAlignedPointerFromEmbedderData(index)) == "data");
     },
@@ -402,6 +404,7 @@ TEST_F(Environment, context_AlignedPointerFromEmbedderData) {
     thread.join();
     EXPECT_TRUE(static_cast<std::string *>(context->GetAlignedPointerFromEmbedderData(index)) == &data);
 }
+
 
 TEST_F(Environment, context_DetachGlobal) {
     v8::Isolate *isolate = getIsolate();

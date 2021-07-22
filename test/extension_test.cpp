@@ -1,7 +1,6 @@
 #include "../environment.h"
 #include "libplatform/libplatform.h"
 #include <iostream>
-#include <thread>
 
 
 class ConsoleExtension : public v8::Extension {

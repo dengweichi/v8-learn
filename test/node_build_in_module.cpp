@@ -2,9 +2,7 @@
 #include "libplatform/libplatform.h"
 #include "v8.h"
 #include <algorithm>
-#include <fstream>
 #include <functional>
-#include <iostream>
 #include <string>
 
 /**

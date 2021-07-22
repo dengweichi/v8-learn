@@ -3,10 +3,6 @@
 #include "libplatform/libplatform.h"
 #include <bitset>
 #include <cmath>
-#include <iostream>
-#include <string>
-#include <thread>
-
 template<class T>
 class Handle {
 private:
@@ -70,7 +66,6 @@ TEST_F(Environment, local_isEmpty) {
     EXPECT_FALSE(context->Global()->Get(context, v8::String::NewFromUtf8Literal(isolate, "Promise")).IsEmpty());
     // 获取一个undefined 的值无法转型成 对象类型
     EXPECT_TRUE(context->Global()->Get(context, v8::String::NewFromUtf8Literal(isolate, "global")).ToLocalChecked()->IsUndefined());
-    EXPECT_TRUE(context->Global()->Get(context, v8::String::NewFromUtf8Literal(isolate, "global")).ToLocalChecked().As<v8::Object>().IsEmpty());
 }
 
 TEST_F(Environment, local_clear) {

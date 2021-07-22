@@ -13,7 +13,7 @@ bool IsAligned(unsigned long long value, unsigned long long alignment) {
 /**
  * 测试隔离实例地址空间4GB 对齐
  */
-TEST(isolate_test, isolate_4g_address_aligned) {
+/*TEST(isolate_test, isolate_4g_address_aligned) {
     unsigned long long GB = 1024 * 1024 * 1024;
     v8::Isolate::CreateParams create_params1;
     create_params1.array_buffer_allocator =
@@ -31,7 +31,7 @@ TEST(isolate_test, isolate_4g_address_aligned) {
     }
     isolate1->Dispose();
     isolate2->Dispose();
-}
+}*/
 
 double globalNum = 0;
 TEST(isolate_test, isolate_jsObject_communication) {
@@ -79,9 +79,10 @@ TEST(isolate_test, isolate_jsObject_communication) {
                             info.GetReturnValue().Set(globalNum);
                         })
                         .ToLocalChecked();
-        context2->Global()->Set(
-                context2, v8::String::NewFromUtf8Literal(isolate2, "globalGetFun"),
-                function2);
+        EXPECT_TRUE(context2->Global()->Set(
+                                              context2, v8::String::NewFromUtf8Literal(isolate2, "globalGetFun"),
+                                              function2)
+                            .FromJust());
         const char *scriptSource2 = "globalGetFun()";
         v8::Local<v8::String> source2 =
                 v8::String::NewFromUtf8(isolate2, scriptSource2).ToLocalChecked();
@@ -102,7 +103,6 @@ TEST(isolate_test, Multithreading) {
     {
         v8::Persistent<v8::Context, v8::CopyablePersistentTraits<v8::Context>> globalContext;
         {
-            v8::Locker locker(isolate);
             v8::Isolate::Scope scope(isolate);
             v8::HandleScope handleScope(isolate);
             v8::Local<v8::Context> context = v8::Context::New(isolate);
@@ -121,9 +121,9 @@ TEST(isolate_test, Multithreading) {
             globalContext = globalContext1;
         }
         std::thread thread([](v8::Isolate *isolate, v8::Persistent<v8::Context, v8::CopyablePersistentTraits<v8::Context>> context) -> void {
-            v8::Locker locker(isolate);
             v8::Isolate::Scope scope(isolate);
             v8::HandleScope handleScope(isolate);
+            v8::Locker locker(isolate);
             v8::Local<v8::Context> localContext = v8::Local<v8::Context>::New(isolate, context);
             v8::Context::Scope context_scope(localContext);
             const char *scriptSource = "fun()";
@@ -542,8 +542,8 @@ TEST_F(Environment, MessageListener) {
 TEST_F(Environment, SetAbortOnUncaughtException) {
     v8::V8::SetFlagsFromString("--abort-on-uncaught-exception");
     v8::Isolate *isolate = getIsolate();
-    v8::Locker locker(isolate);
     v8::HandleScope scope(isolate);
+    v8::Locker locker(isolate);
     v8::Local<v8::Context> context = v8::Context::New(isolate);
     v8::Context::Scope context_scope(context);
     {

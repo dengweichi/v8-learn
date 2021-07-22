@@ -2,9 +2,6 @@
 #include "libplatform/libplatform.h"
 #include <bitset>
 #include <cmath>
-#include <iostream>
-#include <string>
-#include <thread>
 
 namespace v10 {
     typedef uint64_t Address;
