@@ -131,8 +131,7 @@ TEST(isolate_test, Multithreading) {
             v8::Local<v8::Script> script = v8::Script::Compile(localContext, source).ToLocalChecked();
             v8::Local<v8::Value> result = script->Run(localContext).ToLocalChecked();
             EXPECT_EQ(result.As<v8::Number>()->Value(), 1);
-        },
-                           isolate, globalContext);
+        },isolate, globalContext);
         thread.join();
         globalContext.SetWeak();
     }
