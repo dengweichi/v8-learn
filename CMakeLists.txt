@@ -22,11 +22,19 @@ include_directories(./googletest/googlemock/include)
 
 include_directories(${PROJECT_SOURCE_DIR}/v8/include)
 
+# 平台相关的代码
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(PLATFORM linuxThreadDelegate.cpp)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(PLATFORM winThreadDelegate.cpp)
+else()
+    set(PLATFORM "")
+endif()
 
-add_executable(${PROJECT_NAME}
+add_executable(${PROJECT_NAME} ${PLATFORM}
         main.cpp
         environment.cpp
-        environment.h
+        abstractAsyncTask.cpp
         test/isolate_test.cpp
         test/context_test.cpp
         test/handle_test.cpp
@@ -161,4 +169,4 @@ endif()
 target_link_libraries(${PROJECT_NAME} gtest gtest_main)
 target_link_libraries(${PROJECT_NAME} gmock gmock_main)
 
-file(COPY ./test/source DESTINATION ${CMAKE_BINARY_DIR})
+#file(COPY ./test/source DESTINATION ${CMAKE_BINARY_DIR})

@@ -133,7 +133,6 @@ TEST(isolate_test, Multithreading) {
             EXPECT_EQ(result.As<v8::Number>()->Value(), 1);
         },isolate, globalContext);
         thread.join();
-        globalContext.SetWeak();
     }
     isolate->Dispose();
 }
