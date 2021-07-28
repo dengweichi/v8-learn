@@ -6,6 +6,40 @@
 
 static unsigned int global_count = 0;
 
+class CallBackAsyncTask : public AbstractAsyncTask {
+private:
+    v8::Persistent<v8::Context> persistentContext;
+    v8::Persistent<v8::Function> persistentCallBack;
+    v8::Isolate* isolate;
+public:
+    CallBackAsyncTask(v8::Isolate* isolate, v8::Local<v8::Context> context, v8::Local<v8::Function> callBack): AbstractAsyncTask() {
+        this->isolate = isolate;
+        this->persistentContext.Reset(isolate, context);
+        this->persistentCallBack.Reset(isolate, callBack);
+    }
+    void run() override{
+        v8::Locker locker(this->isolate);
+        v8::Isolate::Scope scope(this->isolate);
+        {
+            v8::HandleScope handleScope(isolate);
+            v8::Local<v8::Context> context = persistentContext.Get(this->isolate);
+            v8::Context::Scope context_scope(context);
+            v8::Local<v8::Function> callback = persistentCallBack.Get(this->isolate);
+            const int argc = 1;
+            v8::Local<v8::Value> argv [] = { v8::Number::New(isolate, 1) };
+            callback->Call(context, v8::Null(this->isolate), argc, argv).ToLocalChecked();
+        }
+    }
+    ~CallBackAsyncTask(){
+        this->persistentContext.Reset();
+        this->persistentCallBack.Reset();
+    }
+};
+
+TEST_F(Environment, async_callback){
+    
+}
+
 TEST_F(Environment, promise_resolver) {
     global_count = 0;
     v8::Isolate *isolate = getIsolate();
