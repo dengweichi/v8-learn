@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
 #include "v8.h"
 #include "libplatform/libplatform.h"
-#include "environment.h"
 
 v8::Platform* g_default_platform = nullptr;
 

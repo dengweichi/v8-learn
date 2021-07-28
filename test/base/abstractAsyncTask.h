@@ -11,7 +11,6 @@
      ~AbstractAsyncTask();
      virtual void run() = 0;
      void join();
-     void detach();
      void start();
      class Delegate{
      protected:
@@ -20,7 +19,7 @@
          explicit Delegate(AbstractAsyncTask* abstractAsyncTask):abstractAsyncTask(abstractAsyncTask){};
          virtual void createThread() = 0;
          virtual void joinThread() = 0;
-         virtual void detachThread() = 0;
+         virtual ~Delegate() = default;;
      };
  private:
      Delegate* delegate;

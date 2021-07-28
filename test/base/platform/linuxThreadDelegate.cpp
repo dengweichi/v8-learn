@@ -16,6 +16,3 @@ void LinuxThreadDelegate::createThread() {
 void LinuxThreadDelegate::joinThread() {
     pthread_join(this->tid, nullptr);
 }
-void LinuxThreadDelegate::detachThread() {
-    pthread_detach(this->tid);
-}

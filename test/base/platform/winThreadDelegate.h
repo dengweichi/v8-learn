@@ -4,16 +4,17 @@
 
 #ifndef V8_LEARN_WIN_THREAD_DELEGATE_H
 #define V8_LEARN_WIN_THREAD_DELEGATE_H
-#include "./abstractAsyncTask.h"
+#include "../abstractAsyncTask.h"
 #include <windows.h>
 
 class WinThreadDelegate:public AbstractAsyncTask::Delegate{
 private:
-    DWORD  threadId = 0;
+    unsigned  threadId = 0;
+    HANDLE thread = nullptr;
 public:
     explicit WinThreadDelegate(AbstractAsyncTask* abstractAsyncTask): AbstractAsyncTask::Delegate(abstractAsyncTask){};
     void createThread() override;
-    void detachThread() override;
     void joinThread() override;
+    ~WinThreadDelegate()  override;
 };
 #endif//V8_LEARN_WIN_THREAD_DELEGATE_H
