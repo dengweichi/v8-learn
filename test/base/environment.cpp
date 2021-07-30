@@ -83,13 +83,13 @@ std::string Environment::NormalizePath(const std::string& path,
     return os.str();
 }
 
-std::string readFile (std::string& path) {
+std::string&& Environment::ReadFile (std::string& path){
     v8::Isolate* isolate = v8::Isolate::GetCurrent();
     // 读取主模块文件
     std::ifstream in(path.c_str());
     // 如果打开文件失败
     if (!in.is_open()) {
-        return "";
+        return std::move(std::string(""));
     }
     std::string source;
     char buffer[256];
@@ -98,7 +98,7 @@ std::string readFile (std::string& path) {
         in.getline(buffer,256);
         source.append(buffer);
     };
-    return source;
+    return std::move(source);
 }
 
 

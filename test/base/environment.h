@@ -65,7 +65,7 @@ public:
      * @param path
      * @return
      */
-    static std::string readFile (std::string& path);
+    static std::string&& ReadFile (std::string& path);
 };
 
 #endif//V8_EXTENSION_ENVIRONMENT_H

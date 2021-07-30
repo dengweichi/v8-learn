@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5.3)
+cmake_minimum_required(VERSION 3.7)
 project(v8_learn)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -169,4 +169,9 @@ endif()
 target_link_libraries(${PROJECT_NAME} gtest gtest_main)
 target_link_libraries(${PROJECT_NAME} gmock gmock_main)
 
-#file(COPY ./test/source DESTINATION ${CMAKE_BINARY_DIR} FOLLOW_SYMLINK_CHAIN)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # 把资源目录拷贝副本到二进制目录上。
+    execute_process(COMMAND cp -r  -l  ${PROJECT_SOURCE_DIR}/test/source ${CMAKE_BINARY_DIR})
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    file(COPY ./test/source DESTINATION ${CMAKE_BINARY_DIR})
+endif()
